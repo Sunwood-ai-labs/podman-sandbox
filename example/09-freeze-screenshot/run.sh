@@ -37,6 +37,18 @@ podman run --rm -v "$PWD/output:/output:Z" freeze-screenshot \
 echo "Created: output/eza.png"
 
 echo ""
+echo "=== Example 1b: 通常の ls -al (比較用) ==="
+podman run --rm -v "$PWD/output:/output:Z" freeze-screenshot \
+    --execute "ls -al /go" \
+    -o /output/ls-al.png \
+    --window \
+    --border.radius 12 \
+    --shadow.blur 15 \
+    --margin 30
+
+echo "Created: output/ls-al.png"
+
+echo ""
 echo "=== Example 2: tree (ディレクトリ構造 + アイコン) ==="
 podman run --rm -v "$PWD/output:/output:Z" freeze-screenshot \
     --execute "eza --tree --icons --level=2 /go/bin" \

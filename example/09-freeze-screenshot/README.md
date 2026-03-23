@@ -17,6 +17,32 @@ Freeze は Charmbracelet 製のツールで、以下の機能を提供:
 ./run.sh
 ```
 
+## 生成例
+
+### eza (カラフルな ls)
+
+![eza](images/eza.png)
+
+### ls -al (通常の ls)
+
+![ls-al](images/ls-al.png)
+
+### tree (ディレクトリ構造)
+
+![tree](images/tree.png)
+
+### figlet (アスキーアート)
+
+![figlet](images/figlet.png)
+
+### PODMAN バナー
+
+![podman](images/podman.png)
+
+### コード (Dracula テーマ)
+
+![code](images/code.png)
+
 ## 使用例
 
 ### コードを画像化
@@ -34,9 +60,11 @@ podman run --rm -v "$PWD/output:/output:Z" freeze-screenshot \
 
 ```bash
 podman run --rm -v "$PWD/output:/output:Z" freeze-screenshot \
-    --execute "ls -la" \
+    --execute "eza -lah --icons" \
     -o /output/terminal.png \
-    --window
+    --window \
+    --border.radius 12 \
+    --shadow.blur 15
 ```
 
 ### パイプから入力

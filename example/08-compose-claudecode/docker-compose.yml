@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+  # Claude Code コンテナ (Alibaba Qwen を直接使用)
+  claudecode:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: claudecode-compose:latest
+    container_name: claudecode
+    environment:
+      # Alibaba Cloud Coding Plan (Anthropic 互換 API)
+      - ANTHROPIC_BASE_URL=https://coding-intl.dashscope.aliyuncs.com/apps/anthropic
+      - ANTHROPIC_API_KEY=${ALIBABA_API_KEY}
+      - ANTHROPIC_MODEL=${CLAUDE_MODEL:-qwen3-coder-plus}
+    volumes:
+      - ./workspace:/workspace:Z
+    working_dir: /workspace
+    command: --help
+    stdin_open: true
+    tty: true
