@@ -3,6 +3,9 @@
 .containers/
 .cache/
 
+# Environment files (keep .env.example and sample .env)
+# *.env
+
 # Temporary files
 *.tmp
 *.log

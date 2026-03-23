@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  # Web サーバー
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    environment:
+      - NGINX_HOST=localhost
+    depends_on:
+      - api
+    networks:
+      - app-network
+
+  # API サーバー
+  api:
+    image: node:20-alpine
+    working_dir: /app
+    command: node -e "require('http').createServer((req,res)=>res.end('API OK')).listen(3000)"
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - app-network
+
+  # データベース
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-admin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_DB: ${DB_NAME:-mydb}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  db-data:
