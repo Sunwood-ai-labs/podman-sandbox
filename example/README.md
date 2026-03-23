@@ -6,10 +6,11 @@ Podman の基本的な使い方を学ぶための例集です。
 
 ```
 example/
-├── 01-basic-container/   # 基本的なコンテナ実行
-├── 02-pod-example/       # Pod の使い方
-├── 03-systemd-service/   # systemd 統合
-└── 04-dockerfile-example/ # Dockerfile ビルド
+├── 01-basic-container/    # 基本的なコンテナ実行
+├── 02-pod-example/        # Pod の使い方
+├── 03-systemd-service/    # systemd 統合
+├── 04-dockerfile-example/ # Dockerfile ビルド
+└── 05-claudecode-example/ # ClaudeCode 内蔵コンテナ
 ```
 
 ## 各例の内容
@@ -20,6 +21,7 @@ example/
 | 02 | pod-example | 複数コンテナを Pod で管理 | ★★☆ |
 | 03 | systemd-service | コンテナを systemd サービス化 | ★★☆ |
 | 04 | dockerfile-example | Dockerfile からビルド | ★★☆ |
+| 05 | claudecode-example | Claude Code CLI を内蔵したコンテナ | ★★★ |
 
 ## 実行方法
 
@@ -61,3 +63,4 @@ podman pod rm -af
 
 - [Podman 公式ドキュメント](https://podman.io/)
 - [Podman GitHub](https://github.com/containers/podman)
+- [Claude Code](https://github.com/anthropics/claude-code)
