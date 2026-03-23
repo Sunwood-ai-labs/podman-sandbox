@@ -1,0 +1,8 @@
+# Podman
+.local/
+.containers/
+.cache/
+
+# Temporary files
+*.tmp
+*.log
