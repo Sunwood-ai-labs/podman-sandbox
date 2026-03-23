@@ -125,11 +125,11 @@ podman-compose run -it claudecode
 
 ### Qwen で挨拶
 
-![Qwen Hello](images/qwen-hello.png)
+![Qwen Hello](images/qwen-hello.svg)
 
 ### Qwen で計算
 
-![Qwen Math](images/qwen-math.png)
+![Qwen Math](images/qwen-math.svg)
 
 ## トラブルシューティング
 
