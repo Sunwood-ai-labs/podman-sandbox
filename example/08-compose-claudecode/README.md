@@ -121,6 +121,16 @@ podman-compose run --rm -e ANTHROPIC_MODEL=qwen-turbo claudecode -p "Quick quest
 podman-compose run -it claudecode
 ```
 
+## 実行例
+
+### Qwen で挨拶
+
+![Qwen Hello](images/qwen-hello.png)
+
+### Qwen で計算
+
+![Qwen Math](images/qwen-math.png)
+
 ## トラブルシューティング
 
 ### "Unable to connect to Anthropic services"
