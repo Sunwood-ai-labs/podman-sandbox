@@ -81,6 +81,32 @@ podman-compose down -v
 podman-compose --pod up -d
 ```
 
+## 動作確認
+
+```bash
+# 起動
+$ podman-compose up -d
+
+# ステータス確認
+$ podman ps
+CONTAINER ID  IMAGE                           COMMAND               STATUS        PORTS                 NAMES
+035df3aabc    docker.io/library/nginx:alpine  nginx -g daemon o...  Up 5 seconds   0.0.0.0:8085->80/tcp  07-compose-example_web_1
+df669670d8    docker.io/library/nginx:alpine  nginx -g daemon o...  Up 5 seconds   0.0.0.0:8086->80/tcp  07-compose-example_api_1
+
+# Web にアクセス
+$ curl http://localhost:8085
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+...
+
+# API にアクセス
+$ curl http://localhost:8086
+<!DOCTYPE html>
+...
+```
+
 ## クリーンアップ
 
 ```bash

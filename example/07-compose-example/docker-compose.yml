@@ -1,45 +1,22 @@
 version: "3.8"
 
 services:
-  # Web サーバー
+  # Web サーバー (nginx)
   web:
-    image: nginx:alpine
+    image: docker.io/library/nginx:alpine
     ports:
-      - "8080:80"
-    environment:
-      - NGINX_HOST=localhost
-    depends_on:
-      - api
+      - "8085:80"
     networks:
       - app-network
 
-  # API サーバー
+  # API サーバー (シンプルなecho)
   api:
-    image: node:20-alpine
-    working_dir: /app
-    command: node -e "require('http').createServer((req,res)=>res.end('API OK')).listen(3000)"
+    image: docker.io/library/nginx:alpine
     ports:
-      - "3000:3000"
-    environment:
-      - NODE_ENV=development
-    networks:
-      - app-network
-
-  # データベース
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: ${DB_USER:-admin}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
-      POSTGRES_DB: ${DB_NAME:-mydb}
-    volumes:
-      - db-data:/var/lib/postgresql/data
+      - "8086:80"
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-
-volumes:
-  db-data:
