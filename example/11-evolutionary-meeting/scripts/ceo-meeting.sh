@@ -1,11 +1,11 @@
 #!/bin/bash
 # CEO会議 - 戦略・改善会議
-# CTO会議を評価して company/ ファイルを更新
+# CTO会議を評価して、自分でcompany/ファイルを修正する
 
 set -e
 
 TIMESTAMP=$(date +"%Y%m%d_%H%M")
-DATE=$(date "+%Y-%m-%d"
+DATE=$(date "+%Y-%m-%d")
 TIME=$(date "+%H:%M")
 WORKSPACE="/workspace"
 COMPANY_DIR="${WORKSPACE}/company"
@@ -63,8 +63,9 @@ FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "")
 
 log "📊 直近のCTO会議を分析中..."
 
-# Claude に戦略分析を依頼
+# Claude に戦略分析と即時修正を依頼
 OUTPUT=$(claude -p "あなたはCEO（最高経営責任者）です。
+**重要**: 評価したら、自分でファイルを修正してください。
 
 ## 現在の会社情報
 
@@ -90,84 +91,86 @@ ${CTO_CONTENT}
 
 ---
 
-## タスク
+## あなたのタスク
 
-CTO会議の成果を評価し、必要に応じてファイルを更新してください。
-CEO会議ルールに記載された出力形式に従ってください。
+### 1. CTO会議を評価
+- スプリントゴール達成率
+- インクリメント品質
+- レトロスペクティブの質
+- ブロッカーの有無
 
-### 評価基準
-- 効率性: CTO会議は時間内に終了したか？
-- 具体性: アクションアイテムは実行可能か？
-- 整合性: フォーカスと合致しているか？
-- 品質: 議事録の質はどうか？
+### 2. 必要なファイルを**今すぐ修正**
+改善が必要なファイルがあれば、更新後の完全な内容を出力してください。
+出力した内容は自動的にファイルに反映されます。
 
-### 出力形式
+修正が必要なファイルごとに、以下の形式で出力：
+
+\`\`\`file:cto-rules.md
+（更新後のcto-rules.mdの完全な内容、変更がなければ出力しない）
+\`\`\`
+
+\`\`\`file:ceo-rules.md
+（更新後のceo-rules.mdの完全な内容、変更がなければ出力しない）
+\`\`\`
+
+\`\`\`file:focus.md
+（更新後のfocus.mdの完全な内容、変更がなければ出力しない）
+\`\`\`
+
+\`\`\`file:strategy.md
+（更新後のstrategy.mdの完全な内容、変更がなければ出力しない）
+\`\`\`
+
+\`\`\`file:history.md
+（追記する内容のみ）
+\`\`\`
+
+### 3. 議事録の出力形式
 
 \`\`\`markdown
 ## 📊 CTO会議評価
-- 評価内容
 
-## 📋 更新が必要なファイル
+### スプリントゴール達成率
+- 達成率: XX%
 
-### cto-rules.md
-（更新後の内容、変更がなければ「変更なし」）
+### 評価サマリー
+- 良かった点: ...
+- 改善が必要な点: ...
 
-### ceo-rules.md
-（更新後の内容、変更がなければ「変更なし」）
+## 🔧 実施した修正
+（修正したファイルと内容の要約）
 
-### focus.md
-（更新後の内容、変更がなければ「変更なし」）
-
-### strategy.md
-（更新後の内容、変更がなければ「変更なし」）
-
-## 📝 history.md 追記用
-（追記すべき内容があれば）
+## 📈 次回への引き継ぎ
+- 次回のCTO会議に期待すること
 \`\`\`
 
 日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 分析エラー"
 
 # ファイル更新を抽出して適用
-if echo "$OUTPUT" | grep -q "cto-rules.md"; then
-    NEW_RULES=$(echo "$OUTPUT" | sed -n '/### cto-rules.md/,/### /p' | sed '1d;$d' | sed '/^$/d' | head -50)
-    if [ -n "$NEW_RULES" ] && [ "$NEW_RULES" != "変更なし" ]; then
-        echo "$NEW_RULES" > "${COMPANY_DIR}/cto-rules.md"
-        log "📝 cto-rules.md を更新"
-    fi
-fi
+extract_and_save() {
+    local filename="$1"
+    local pattern="file:${filename}"
+    local content=$(echo "$OUTPUT" | sed -n "/\`\`\`${pattern}/,/\`\`\`/p" | sed '1d;$d')
 
-if echo "$OUTPUT" | grep -q "ceo-rules.md"; then
-    NEW_CEO_RULES=$(echo "$OUTPUT" | sed -n '/### ceo-rules.md/,/### /p' | sed '1d;$d' | sed '/^$/d' | head -50)
-    if [ -n "$NEW_CEO_RULES" ] && [ "$NEW_CEO_RULES" != "変更なし" ]; then
-        echo "$NEW_CEO_RULES" > "${COMPANY_DIR}/ceo-rules.md"
-        log "📝 ceo-rules.md を更新"
+    if [ -n "$content" ]; then
+        echo "$content" > "${COMPANY_DIR}/${filename}"
+        log "📝 ${filename} を更新"
     fi
-fi
+}
 
-if echo "$OUTPUT" | grep -q "focus.md"; then
-    NEW_FOCUS=$(echo "$OUTPUT" | sed -n '/### focus.md/,/### /p' | sed '1d;$d' | sed '/^$/d' | head -30)
-    if [ -n "$NEW_FOCUS" ] && [ "$NEW_FOCUS" != "変更なし" ]; then
-        echo "$NEW_FOCUS" > "${COMPANY_DIR}/focus.md"
-        log "📝 focus.md を更新"
-    fi
-fi
+# 各ファイルを更新
+extract_and_save "cto-rules.md"
+extract_and_save "ceo-rules.md"
+extract_and_save "focus.md"
+extract_and_save "strategy.md"
 
-if echo "$OUTPUT" | grep -q "strategy.md"; then
-    NEW_STRATEGY=$(echo "$OUTPUT" | sed -n '/### strategy.md/,/## /p' | sed '1d;$d' | sed '/^$/d' | head -50)
-    if [ -n "$NEW_STRATEGY" ] && [ "$NEW_STRATEGY" != "変更なし" ]; then
-        echo "$NEW_STRATEGY" > "${COMPANY_DIR}/strategy.md"
-        log "📝 strategy.md を更新"
-    fi
-fi
-
-if echo "$OUTPUT" | grep -q "history.md"; then
-    HISTORY_ADD=$(echo "$OUTPUT" | sed -n '/## 📝 history.md 追記用/,/```/p' | sed '1d;$d' | sed '/^$/d')
-    if [ -n "$HISTORY_ADD" ]; then
-        echo "" >> "${COMPANY_DIR}/history.md"
-        echo "### ${DATE}" >> "${COMPANY_DIR}/history.md"
-        echo "$HISTORY_ADD" >> "${COMPANY_DIR}/history.md"
-        log "📝 history.md に追記"
-    fi
+# history.md は追記
+HISTORY_ADD=$(echo "$OUTPUT" | sed -n '/```file:history.md/,/```/p' | sed '1d;$d')
+if [ -n "$HISTORY_ADD" ]; then
+    echo "" >> "${COMPANY_DIR}/history.md"
+    echo "### ${DATE} ${TIME}" >> "${COMPANY_DIR}/history.md"
+    echo "$HISTORY_ADD" >> "${COMPANY_DIR}/history.md"
+    log "📝 history.md に追記"
 fi
 
 # 議事録保存
