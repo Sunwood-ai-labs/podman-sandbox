@@ -46,53 +46,13 @@
 
 ### 主な特徴
 
-<table>
-<tr>
-<td width="72" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/dns_off/v1-72px.svg#892ca0" width="48" height="48" alt="Daemonless">
-</td>
-<td>
-<strong>デーモンレス</strong><br>
-<small>バックグラウンドで動くデーモンが不要</small>
-</td>
-</tr>
-<tr>
-<td width="72" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/lock_open/v1-72px.svg#892ca0" width="48" height="48" alt="Rootless">
-</td>
-<td>
-<strong>ルートレス</strong><br>
-<small>root 権限なしでコンテナを実行可能</small>
-</td>
-</tr>
-<tr>
-<td width="72" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/sync/v1-72px.svg#892ca0" width="48" height="48" alt="Docker Compatible">
-</td>
-<td>
-<strong>Docker 互換</strong><br>
-<small>docker コマンドとほぼ同じ構文</small>
-</td>
-</tr>
-<tr>
-<td width="72" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/view_module/v1-72px.svg#892ca0" width="48" height="48" alt="Pod Support">
-</td>
-<td>
-<strong>Pod 対応</strong><br>
-<small>Kubernetes 風の「Pod」単位でコンテナを管理</small>
-</td>
-</tr>
-<tr>
-<td width="72" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/settings_suggest/v1-72px.svg#892ca0" width="48" height="48" alt="systemd">
-</td>
-<td>
-<strong>systemd 統合</strong><br>
-<small>コンテナを systemd サービスとして管理</small>
-</td>
-</tr>
-</table>
+| 特徴 | 説明 |
+|------|------|
+| **デーモンレス** | バックグラウンドで動くデーモンが不要 |
+| **ルートレス** | root 権限なしでコンテナを実行可能 |
+| **Docker 互換** | docker コマンドとほぼ同じ構文 |
+| **Pod 対応** | Kubernetes 風の「Pod」単位でコンテナを管理 |
+| **systemd 統合** | コンテナを systemd サービスとして管理 |
 
 ---
 

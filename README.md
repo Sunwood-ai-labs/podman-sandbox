@@ -46,35 +46,13 @@
 
 ### Key Features
 
-<table>
-<tr>
-<td width="20%" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/dns_off/v1-72px.svg#892ca0" width="48" height="48" alt="Daemonless"><br>
-<strong>Daemonless</strong><br>
-<small>No background daemon required</small>
-</td>
-<td width="20%" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/lock_open/v1-72px.svg#892ca0" width="48" height="48" alt="Rootless"><br>
-<strong>Rootless</strong><br>
-<small>Run without root privileges</small>
-</td>
-<td width="20%" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/sync/v1-72px.svg#892ca0" width="48" height="48" alt="Docker Compatible"><br>
-<strong>Docker Compatible</strong><br>
-<small>Drop-in replacement</small>
-</td>
-<td width="20%" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/view_module/v1-72px.svg#892ca0" width="48" height="48" alt="Pod Support"><br>
-<strong>Pod Support</strong><br>
-<small>Kubernetes-style grouping</small>
-</td>
-<td width="20%" align="center">
-<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/settings_suggest/v1-72px.svg#892ca0" width="48" height="48" alt="systemd"><br>
-<strong>systemd Integration</strong><br>
-<small>Native service management</small>
-</td>
-</tr>
-</table>
+| Feature | Description |
+|---------|-------------|
+| **Daemonless** | No background daemon required |
+| **Rootless** | Run without root privileges |
+| **Docker Compatible** | Drop-in replacement for Docker commands |
+| **Pod Support** | Kubernetes-style container grouping |
+| **systemd Integration** | Native systemd service management |
 
 ---
 
