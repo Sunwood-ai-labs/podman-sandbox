@@ -1,0 +1,15 @@
+services:
+  evolutionary-meeting:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: evolutionary-meeting:latest
+    container_name: claude-evolution
+    volumes:
+      - ./workspace:/workspace:Z
+      - ./.claude/settings.json:/root/.claude/settings.json:Z
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+    restart: unless-stopped
