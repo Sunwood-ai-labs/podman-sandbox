@@ -9,7 +9,8 @@ export default defineConfig({
   ignoreDeadLinks: true,
 
   head: [
-    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/podman-sandbox/podman-sandbox-icon.svg' }]
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/podman-sandbox/podman-sandbox-icon.svg' }],
+    ['link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=dns_off,lock_open,sync,view_module,settings_suggest' }]
   ],
 
   base: '/podman-sandbox/',

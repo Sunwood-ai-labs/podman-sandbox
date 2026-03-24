@@ -4,19 +4,19 @@ hero: true
 title: Podman Sandbox
 description: Podman examples and tutorials for comparing and learning Podman vs Docker
 features:
-  - icon: 🐳
+  - icon: <span class="material-symbols-outlined icon-feature">dns_off</span>
     title: Daemonless
     details: No background daemon required
-  - icon: 🔒
+  - icon: <span class="material-symbols-outlined icon-feature">lock_open</span>
     title: Rootless
     details: Run containers without root privileges
-  - icon: 🔄
+  - icon: <span class="material-symbols-outlined icon-feature">sync</span>
     title: Docker Compatible
     details: Drop-in replacement for Docker commands
-  - icon: 📦
+  - icon: <span class="material-symbols-outlined icon-feature">view_module</span>
     title: Pod Support
     details: Kubernetes-style container grouping
-  - icon: ⚙️
+  - icon: <span class="material-symbols-outlined icon-feature">settings_suggest</span>
     title: systemd Integration
     details: Native systemd service management
 ---
@@ -31,3 +31,10 @@ Podman is a container runtime developed by Red Hat that serves as a drop-in repl
 - [Architecture](/guide/architecture) - Understand Podman vs Docker
 - [Examples](/examples/) - Browse practical examples
 - [systemd Integration](/guide/systemd) - Learn about systemd service management
+
+<style>
+.icon-feature {
+  font-size: 48px;
+  color: #892ca0;
+}
+</style>
