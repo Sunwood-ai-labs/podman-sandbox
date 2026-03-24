@@ -1,0 +1,10 @@
+# Claude Office Worker Cron Schedule
+# 1時間おきに会社みたいな動きをする
+#
+# 分 時 日 月 曜日 コマンド
+
+# 毎時0分に実行（1時間おき）
+0 * * * * /app/scripts/office-work.sh >> /logs/cron.log 2>&1
+
+# デバッグ用: 5分おきに実行したい場合は以下をアンコメント
+# */5 * * * * /app/scripts/office-work.sh >> /logs/cron.log 2>&1

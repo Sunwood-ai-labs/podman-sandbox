@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  # Claude Meeting Bot (定時会議ボット)
+  meeting-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: claude-meeting-bot:latest
+    container_name: claude-meeting
+    env_file:
+      - .env
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./workspace:/workspace:Z
+      - ~/.claude:/root/.claude:Z
+    restart: unless-stopped
