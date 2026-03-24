@@ -19,13 +19,16 @@
   <a href="https://github.com/Sunwood-ai-labs/podman-sandbox">
     <img src="https://img.shields.io/badge/GitHub-podman--sandbox-892ca0?style=flat-square&logo=github" alt="GitHub">
   </a>
+  <a href="https://sunwood-ai-labs.github.io/podman-sandbox/">
+    <img src="https://img.shields.io/badge/Docs-VitePress-892ca0?style=flat-square&logo=googledocs" alt="Docs">
+  </a>
 </p>
 
 ---
 
-## 📋 目次
+## 目次
 
-- [概要](#-概要)
+- [概要](#概要)
 - [主な特徴](#-主な特徴)
 - [アーキテクチャの違い](#-アーキテクチャの違い)
 - [メモリ効率の比較](#-メモリ効率の比較)
@@ -37,21 +40,63 @@
 
 ---
 
-## 🎯 概要
+## 概要
 
 **Podman** は Red Hat が開発したコンテナランタイムで、Docker の代替として使用できるツールです。
 
-### ✨ 主な特徴
+### 主な特徴
 
-- **デーモンレス** - バックグラウンドで動くデーモンが不要
-- **ルートレス** - root 権限なしでコンテナを実行可能
-- **Docker 互換** - `podman` コマンドは `docker` コマンドとほぼ同じ構文
-- **Pod 対応** - Kubernetes 風の「Pod」単位でコンテナを管理できる
-- **systemd 統合** - コンテナを systemd サービスとして管理可能
+<table>
+<tr>
+<td width="72" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/dns_off/v1-72px.svg#892ca0" width="48" height="48" alt="Daemonless">
+</td>
+<td>
+<strong>デーモンレス</strong><br>
+<small>バックグラウンドで動くデーモンが不要</small>
+</td>
+</tr>
+<tr>
+<td width="72" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/lock_open/v1-72px.svg#892ca0" width="48" height="48" alt="Rootless">
+</td>
+<td>
+<strong>ルートレス</strong><br>
+<small>root 権限なしでコンテナを実行可能</small>
+</td>
+</tr>
+<tr>
+<td width="72" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/sync/v1-72px.svg#892ca0" width="48" height="48" alt="Docker Compatible">
+</td>
+<td>
+<strong>Docker 互換</strong><br>
+<small>docker コマンドとほぼ同じ構文</small>
+</td>
+</tr>
+<tr>
+<td width="72" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/view_module/v1-72px.svg#892ca0" width="48" height="48" alt="Pod Support">
+</td>
+<td>
+<strong>Pod 対応</strong><br>
+<small>Kubernetes 風の「Pod」単位でコンテナを管理</small>
+</td>
+</tr>
+<tr>
+<td width="72" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/settings_suggest/v1-72px.svg#892ca0" width="48" height="48" alt="systemd">
+</td>
+<td>
+<strong>systemd 統合</strong><br>
+<small>コンテナを systemd サービスとして管理</small>
+</td>
+</tr>
+</table>
 
 ---
 
-## 🏗️ アーキテクチャの違い
+## アーキテクチャの違い
 
 | 項目 | Docker | Podman |
 |------|--------|--------|
@@ -62,7 +107,7 @@
 
 ---
 
-## 💾 メモリ効率の比較
+## メモリ効率の比較
 
 ### 結論
 
@@ -112,7 +157,7 @@ docker stats
 
 ---
 
-## ⚙️ systemd 統合
+## systemd 統合
 
 Podman は systemd との統合が強力で、コンテナを systemd サービスとして管理できます。
 
@@ -175,7 +220,7 @@ systemctl enable --now container-webapp
 
 ---
 
-## 📁 サンプル一覧
+## サンプル一覧
 
 | サンプル | 説明 |
 |----------|------|
@@ -192,7 +237,7 @@ systemctl enable --now container-webapp
 
 ---
 
-## 🚀 基本的な使い方
+## 基本的な使い方
 
 ```bash
 # イメージを取得
@@ -228,7 +273,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## 📊 まとめ
+## まとめ
 
 | 項目 | 推奨 |
 |------|------|
@@ -242,7 +287,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## 📚 参考資料
+## 参考資料
 
 - [Podman 公式ドキュメント](https://podman.io/)
 - [Red Hat - Podman 入門](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/building_running_and_managing_containers)

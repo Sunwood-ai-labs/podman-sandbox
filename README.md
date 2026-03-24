@@ -19,39 +19,66 @@
   <a href="https://github.com/Sunwood-ai-labs/podman-sandbox">
     <img src="https://img.shields.io/badge/GitHub-podman--sandbox-892ca0?style=flat-square&logo=github" alt="GitHub">
   </a>
+  <a href="https://sunwood-ai-labs.github.io/podman-sandbox/">
+    <img src="https://img.shields.io/badge/Docs-VitePress-892ca0?style=flat-square&logo=googledocs" alt="Docs">
+  </a>
 </p>
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [Architecture Differences](#-architecture-differences)
-- [Memory Efficiency Comparison](#-memory-efficiency-comparison)
-- [systemd Integration](#-systemd-integration)
-- [Examples](#-examples)
-- [Basic Usage](#-basic-usage)
-- [Summary](#-summary)
-- [References](#-references)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture Differences](#architecture-differences)
+- [Memory Efficiency Comparison](#memory-efficiency-comparison)
+- [systemd Integration](#systemd-integration)
+- [Examples](#examples)
+- [Basic Usage](#basic-usage)
+- [Summary](#summary)
+- [References](#references)
 
 ---
 
-## 🎯 Overview
+## Overview
 
 **Podman** is a container runtime developed by Red Hat that serves as a drop-in replacement for Docker.
 
-### ✨ Key Features
+### Key Features
 
-- **Daemonless** - No background daemon required
-- **Rootless** - Run containers without root privileges
-- **Docker Compatible** - `podman` commands share nearly identical syntax with `docker`
-- **Pod Support** - Manage containers in Kubernetes-style "Pods"
-- **systemd Integration** - Manage containers as systemd services
+<table>
+<tr>
+<td width="20%" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/dns_off/v1-72px.svg#892ca0" width="48" height="48" alt="Daemonless"><br>
+<strong>Daemonless</strong><br>
+<small>No background daemon required</small>
+</td>
+<td width="20%" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/lock_open/v1-72px.svg#892ca0" width="48" height="48" alt="Rootless"><br>
+<strong>Rootless</strong><br>
+<small>Run without root privileges</small>
+</td>
+<td width="20%" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/sync/v1-72px.svg#892ca0" width="48" height="48" alt="Docker Compatible"><br>
+<strong>Docker Compatible</strong><br>
+<small>Drop-in replacement</small>
+</td>
+<td width="20%" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/view_module/v1-72px.svg#892ca0" width="48" height="48" alt="Pod Support"><br>
+<strong>Pod Support</strong><br>
+<small>Kubernetes-style grouping</small>
+</td>
+<td width="20%" align="center">
+<img src="https://fonts.gstatic.com/sv/symbols/material_symbols_outlined/settings_suggest/v1-72px.svg#892ca0" width="48" height="48" alt="systemd"><br>
+<strong>systemd Integration</strong><br>
+<small>Native service management</small>
+</td>
+</tr>
+</table>
 
 ---
 
-## 🏗️ Architecture Differences
+## Architecture Differences
 
 | Aspect | Docker | Podman |
 |--------|--------|--------|
@@ -62,7 +89,7 @@
 
 ---
 
-## 💾 Memory Efficiency Comparison
+## Memory Efficiency Comparison
 
 ### Conclusion
 
@@ -112,7 +139,7 @@ docker stats
 
 ---
 
-## ⚙️ systemd Integration
+## systemd Integration
 
 Podman has powerful systemd integration, allowing containers to be managed as systemd services.
 
@@ -175,7 +202,7 @@ Now the **container automatically starts on server reboot** and is fully managea
 
 ---
 
-## 📁 Examples
+## Examples
 
 | Example | Description |
 |---------|-------------|
@@ -192,7 +219,7 @@ Now the **container automatically starts on server reboot** and is fully managea
 
 ---
 
-## 🚀 Basic Usage
+## Basic Usage
 
 ```bash
 # Pull image
@@ -228,7 +255,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## 📊 Summary
+## Summary
 
 | Requirement | Recommendation |
 |-------------|----------------|
@@ -242,7 +269,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## 📚 References
+## References
 
 - [Podman Official Documentation](https://podman.io/)
 - [Red Hat - Podman Getting Started](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/building_running_and_managing_containers)
