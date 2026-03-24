@@ -10,6 +10,8 @@ echo ""
 if [ -n "$GH_TOKEN" ]; then
     echo "🔐 GitHub認証を設定中..."
     git config --global credential.helper store
+    git config --global user.email "onizuka.renjiii@gmail.com"
+    git config --global user.name "onizukarenjiii-droid"
     echo "https://${GH_TOKEN}@github.com" > ~/.git-credentials
     chmod 600 ~/.git-credentials
     echo "✅ GitHub認証完了"

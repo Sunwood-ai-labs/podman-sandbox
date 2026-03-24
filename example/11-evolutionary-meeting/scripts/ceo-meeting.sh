@@ -111,8 +111,8 @@ log "✅ CEO会議終了"
 if [ -d "${WORKSPACE}/.git" ] && [ -n "$GH_TOKEN" ]; then
     log "📤 成果物をプッシュ中..."
     cd "${WORKSPACE}"
-    git config user.email "claude-evolution-bot@example.com"
-    git config user.name "Claude Evolution Bot"
+    git config user.email "onizuka.renjiii@gmail.com"
+    git config user.name "onizukarenjiii-droid"
     git add company/ 2>/dev/null || true
     git commit -m "👔 CEO会議 ${DATE} ${TIME}: ルール・フォーカス更新" || true
     git push origin main || log "⚠️ プッシュスキップ"
