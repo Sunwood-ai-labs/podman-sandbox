@@ -99,7 +99,7 @@ if [ -d "${WORKSPACE}/.git" ] && [ -n "$GH_TOKEN" ]; then
     cd "${WORKSPACE}"
     git config user.email "onizuka.renjiii@gmail.com"
     git config user.name "onizukarenjiii-droid"
-    git add company/ 2>/dev/null || true
+    git add company/ meetings/ 2>/dev/null || true
     git commit -m "📄 CTO会議 ${DATE} ${TIME}: ${AGENDA}" || true
     git push origin main || log "⚠️ プッシュスキップ"
 fi
