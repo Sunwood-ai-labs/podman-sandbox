@@ -19,13 +19,14 @@ if [ ! -f /workspace/company/mission.md ]; then
     cp -r /app/workspace/company/* /workspace/company/
 fi
 
-# 初回実行（起動直後にCTO会議を1回実行）
-echo "Running initial CTO meeting..."
-/app/scripts/cto-meeting.sh || echo "Initial meeting skipped (API key not configured?)"
-echo ""
-
-# cron をフォアグラウンドで実行
+# crond をバックグラウンドで起動
 echo "Starting cron scheduler..."
+crond -b -l 2
+
 echo "Next CTO meeting at :00"
 echo "Next CEO meeting at :30"
-exec crond -f -l 2
+echo ""
+
+# フォアグラウンドで待機
+echo "Bot is running. Press Ctrl+C to stop."
+tail -f /dev/null
