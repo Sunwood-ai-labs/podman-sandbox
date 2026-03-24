@@ -1,0 +1,25 @@
+{
+  "name": "podman-sandbox",
+  "version": "1.0.0",
+  "description": "Podman examples and tutorials - A repository for comparing and learning Podman vs Docker",
+  "type": "module",
+  "scripts": {
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sunwood-ai-labs/podman-sandbox.git"
+  },
+  "keywords": ["podman", "docker", "container", "tutorial", "examples", "rootless", "systemd"],
+  "author": "Sunwood-ai-labs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sunwood-ai-labs/podman-sandbox/issues"
+  },
+  "homepage": "https://sunwood-ai-labs.github.io/podman-sandbox/",
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
