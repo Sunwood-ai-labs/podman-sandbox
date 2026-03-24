@@ -1,25 +1,37 @@
-FROM docker.io/library/claude-code:latest
+# Evolutionary Meeting Bot - CTO/CEO 交替会議で自己進化
+# cron + Claude CLI で30分おきに会議を開く
 
-# 必要なツール
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    jq \
-    && rm -rf /var/lib/apt/lists/*
+FROM node:20-alpine
 
+# 必要なツールをインストール
+RUN apk add --no-cache \
+    git bash curl jq \
+    dcron tzdata
+
+# Claude Code CLI をインストール
+RUN npm install -g @anthropic-ai/claude-code
+
+# タイムゾーン設定
+ENV TZ=Asia/Tokyo
+
+# 作業ディレクトリ
 WORKDIR /app
 
-# スクリプト配置
+# スクリプトをコピー
 COPY scripts/ /app/scripts/
 RUN chmod +x /app/scripts/*.sh
 
-# ワークスペース
-RUN mkdir -p /workspace /logs
+# 初期companyファイルをコピー
+COPY workspace/company/ /app/workspace/company/
 
-# entrypoint
+# 出力ディレクトリ
+RUN mkdir -p /workspace/meetings/cto /workspace/meetings/ceo /logs
+
+# cron ジョブを設定
+COPY crontab /etc/crontabs/root
+
+# エントリーポイント
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
-
-# crontab
-COPY crontab /etc/cron.d/claude-cron
-RUN chmod 644 /etc/cron.d/claude-cron
 
 ENTRYPOINT ["/entrypoint.sh"]

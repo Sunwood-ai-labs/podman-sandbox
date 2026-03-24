@@ -15,6 +15,9 @@ fi
 
 echo "🧬 Evolutionary Meeting Bot 起動中..."
 
+# 既存コンテナを停止・削除
+podman rm -f claude-evolution 2>/dev/null || true
+
 # イメージビルド
 podman build -t evolutionary-meeting:latest .
 
@@ -24,7 +27,6 @@ podman run -d \
     --env-file .env \
     -e TZ=Asia/Tokyo \
     -v ./workspace:/workspace:Z \
-    -v ./.claude/settings.json:/root/.claude/settings.json:Z \
     --restart unless-stopped \
     localhost/evolutionary-meeting:latest
 
