@@ -26,37 +26,37 @@
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Key Features](#key-features)
-- [Architecture Differences](#architecture-differences)
-- [Memory Efficiency Comparison](#memory-efficiency-comparison)
-- [systemd Integration](#systemd-integration)
-- [Examples](#examples)
-- [Basic Usage](#basic-usage)
-- [Summary](#summary)
-- [References](#references)
+- [🎯 Overview](#-overview)
+- [✨ Key Features](#-key-features)
+- [🏗️ Architecture Differences](#️-architecture-differences)
+- [💾 Memory Efficiency Comparison](#-memory-efficiency-comparison)
+- [⚙️ systemd Integration](#️-systemd-integration)
+- [📁 Examples](#-examples)
+- [🚀 Basic Usage](#-basic-usage)
+- [📊 Summary](#-summary)
+- [📚 References](#-references)
 
 ---
 
-## Overview
+## 🎯 Overview
 
 **Podman** is a container runtime developed by Red Hat that serves as a drop-in replacement for Docker.
 
-### Key Features
+### ✨ Key Features
 
 | Feature | Description |
 |---------|-------------|
-| **Daemonless** | No background daemon required |
-| **Rootless** | Run without root privileges |
-| **Docker Compatible** | Drop-in replacement for Docker commands |
-| **Pod Support** | Kubernetes-style container grouping |
-| **systemd Integration** | Native systemd service management |
+| 🐳 **Daemonless** | No background daemon required |
+| 🔓 **Rootless** | Run without root privileges |
+| 🔄 **Docker Compatible** | Drop-in replacement for Docker commands |
+| 📦 **Pod Support** | Kubernetes-style container grouping |
+| ⚙️ **systemd Integration** | Native systemd service management |
 
 ---
 
-## Architecture Differences
+## 🏗️ Architecture Differences
 
 | Aspect | Docker | Podman |
 |--------|--------|--------|
@@ -67,7 +67,7 @@
 
 ---
 
-## Memory Efficiency Comparison
+## 💾 Memory Efficiency Comparison
 
 ### Conclusion
 
@@ -117,7 +117,7 @@ docker stats
 
 ---
 
-## systemd Integration
+## ⚙️ systemd Integration
 
 Podman has powerful systemd integration, allowing containers to be managed as systemd services.
 
@@ -180,7 +180,7 @@ Now the **container automatically starts on server reboot** and is fully managea
 
 ---
 
-## Examples
+## 📁 Examples
 
 | Example | Description |
 |---------|-------------|
@@ -197,7 +197,7 @@ Now the **container automatically starts on server reboot** and is fully managea
 
 ---
 
-## Basic Usage
+## 🚀 Basic Usage
 
 ```bash
 # Pull image
@@ -233,7 +233,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## Summary
+## 📊 Summary
 
 | Requirement | Recommendation |
 |-------------|----------------|
@@ -247,7 +247,7 @@ podman run -d -p 80:80 nginx
 
 ---
 
-## References
+## 📚 References
 
 - [Podman Official Documentation](https://podman.io/)
 - [Red Hat - Podman Getting Started](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/9/html/building_running_and_managing_containers)
