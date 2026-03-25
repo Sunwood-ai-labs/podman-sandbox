@@ -167,7 +167,8 @@ in_file=0
 
 while IFS= read -r line; do
     if echo "$line" | grep -q "^===FILE_START:deliverables/"; then
-        current_file=$(echo "$line" | sed 's/^===FILE_START://')
+        # deliverables/xxx を抽出（===を除去）
+        current_file="deliverables/$(echo "$line" | sed 's/^===FILE_START:deliverables\///;s/===$//')"
         in_file=1
         current_content=""
     elif echo "$line" | grep -q "^===FILE_END==="; then
