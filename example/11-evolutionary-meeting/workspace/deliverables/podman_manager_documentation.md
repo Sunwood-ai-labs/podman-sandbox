@@ -227,20 +227,76 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 ./podman_manager.sh stats-detail 85 90 3
 ```
 
+#### 詳細なリソース使用状況を表示（アラートしきい値付き）
+
+```bash
+./podman_manager.sh stats-detail
+```
+
+このコマンドは、CPUとメモリの使用率が指定したしきい値を超えたときに警告を表示するリソースモニタリング機能を提供します。拡張版では、ネットワーク使用量とディスク使用量の監視も可能です。
+
+##### オプションとパラメータ
+
+- `CPU_THRESHOLD`: CPU使用率の警告しきい値（デフォルト: 80%）
+- `MEM_THRESHOLD`: メモリ使用率の警告しきい値（デフォルト: 90%）
+- `INTERVAL`: 更新間隔（秒単位、デフォルト: 2秒）
+- `NETWORK_THRESHOLD`: ネットワーク使用量の警告しきい値（MB単位、オプション）
+- `DISK_THRESHOLD`: ディスク使用量の警告しきい値（MB単位、オプション）
+
+##### 使用例
+
+```bash
+# デフォルトのしきい値（CPU: 80%, メモリ: 90%）で監視
+./podman_manager.sh stats-detail
+
+# カスタムしきい値（CPU: 90%, メモリ: 95%）で監視
+./podman_manager.sh stats-detail 90 95
+
+# カスタムしきい値と更新間隔（3秒ごとに更新）で監視
+./podman_manager.sh stats-detail 85 90 3
+
+# すべてのしきい値を指定（CPU: 85%, メモリ: 90%, ネットワーク: 100MB, ディスク: 50MB）
+./podman_manager.sh stats-detail 85 90 3 100 50
+```
+
+#### リソース使用状況のレポート生成
+
+```bash
+./podman_manager.sh resource-report
+```
+
+このコマンドは、指定された期間にわたってリソース使用状況を監視し、最小・最大・平均値を含む詳細なレポートを生成します。
+
+##### オプションとパラメータ
+
+- `DURATION`: データ収集期間（秒単位、デフォルト: 60秒）
+- `INTERVAL`: 測定間隔（秒単位、デフォルト: 5秒）
+
+##### 使用例
+
+```bash
+# 60秒間、5秒間隔でリソース使用状況を監視しレポートを生成
+./podman_manager.sh resource-report
+
+# 120秒間、10秒間隔でリソース使用状況を監視しレポートを生成
+./podman_manager.sh resource-report 120 10
+```
+
 #### コンテナイメージのセキュリティスキャン
 
 ```bash
 ./podman_manager.sh security-scan <CONTAINER_NAME>
 ```
 
-このコマンドは、指定したコンテナイメージをスキャンして脆弱性を検出します。TrivyまたはPodmanの内蔵スキャナーを使用します。
+このコマンドは、指定したコンテナイメージをスキャンして脆弱性を検出します。TrivyまたはPodmanの内蔵スキャナーを使用します。拡張版では、設定ミスの検出も可能になりました。
 
 ##### オプションとパラメータ
 
 - `CONTAINER_NAME`: スキャン対象のコンテナ名
 - `OUTPUT_FORMAT`: 結果の出力形式（table, json, sarif、デフォルト: table）
 - `SEVERITY_FILTER`: 表示する脆弱性の重大度（LOW, MEDIUM, HIGH, CRITICAL、デフォルト: HIGH,CRITICAL）
-- `LOG_FILE`: 結果を保存するログファイルのパス（デフォルト: security_scan_results.log）
+- `LOG_FILE`: 結果を保存するログファイルのパス（デフォルト: security_scan_results_YYYYMMDD_HHMMSS.log）
+- `CONFIG_ANALYSIS`: 設定分析を含めるかどうか（true/false、デフォルト: false）
 
 ##### 使用例
 
@@ -251,22 +307,26 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 # JSON形式で結果を出力
 ./podman_manager.sh security-scan mycontainer json
 
+# 全ての重大度の脆弱性と設定分析を含めてスキャン
+./podman_manager.sh security-scan mycontainer json "LOW,MEDIUM,HIGH,CRITICAL" custom_output.log true
+
 # 高～中程度の脆弱性をフィルタリング
-./podman_manager.sh security-scan mycontainer table "HIGH,MEDIUM,Critical" custom_output.log
+./podman_manager.sh security-scan mycontainer table "HIGH,MEDIUM,CRITICAL" custom_output.log false
 ```
 
 #### バッチ操作
 
 ```bash
-./podman_manager.sh batch-operation <OPERATION> <REGEX_PATTERN>
+./podman_manager.sh batch-operation <OPERATION> <REGEX_PATTERN> [CONFIRM]
 ```
 
-このコマンドは、正規表現パターンに一致する複数のコンテナに対して一度に操作を実行します。
+このコマンドは、正規表現パターンに一致する複数のコンテナに対して一度に操作を実行します。バッチ操作機能は強化され、一時停止(pause)/再開(unpause)操作が追加され、確認フラグによる安全な操作が可能になりました。
 
 ##### オプションとパラメータ
 
-- `OPERATION`: 実行する操作（start, stop, restart, remove）
+- `OPERATION`: 実行する操作（start, stop, restart, remove, pause, unpause）
 - `REGEX_PATTERN`: コンテナ名に一致させる正規表現パターン
+- `CONFIRM`: 確認フラグ（省略可、実行前に確認プロンプトを表示）
 
 ##### 使用例
 
@@ -280,8 +340,14 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 # 名前が'app'で終わるすべてのコンテナを開始
 ./podman_manager.sh batch-operation start '.*app$'
 
-# 名前が'alpine-'で始まるすべてのコンテナを削除
-./podman_manager.sh batch-operation remove '^alpine-.*'
+# 名前が'alpine-'で始まるすべてのコンテナを削除（実行前に確認）
+./podman_manager.sh batch-operation remove '^alpine-.*' confirm
+
+# 名前が'cache'を含むすべてのコンテナを一時停止
+./podman_manager.sh batch-operation pause '.*cache.*'
+
+# 名前が'cache'を含むすべてのコンテナを再開
+./podman_manager.sh batch-operation unpause '.*cache.*'
 ```
 
 #### 未使用のリソースをクリーンアップ
@@ -413,20 +479,76 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 ./podman_manager.sh stats-detail 85 90 3
 ```
 
+#### 詳細なリソース使用状況を表示（アラートしきい値付き）
+
+```bash
+./podman_manager.sh stats-detail
+```
+
+このコマンドは、CPUとメモリの使用率が指定したしきい値を超えたときに警告を表示するリソースモニタリング機能を提供します。拡張版では、ネットワーク使用量とディスク使用量の監視も可能です。
+
+##### オプションとパラメータ
+
+- `CPU_THRESHOLD`: CPU使用率の警告しきい値（デフォルト: 80%）
+- `MEM_THRESHOLD`: メモリ使用率の警告しきい値（デフォルト: 90%）
+- `INTERVAL`: 更新間隔（秒単位、デフォルト: 2秒）
+- `NETWORK_THRESHOLD`: ネットワーク使用量の警告しきい値（MB単位、オプション）
+- `DISK_THRESHOLD`: ディスク使用量の警告しきい値（MB単位、オプション）
+
+##### 使用例
+
+```bash
+# デフォルトのしきい値（CPU: 80%, メモリ: 90%）で監視
+./podman_manager.sh stats-detail
+
+# カスタムしきい値（CPU: 90%, メモリ: 95%）で監視
+./podman_manager.sh stats-detail 90 95
+
+# カスタムしきい値と更新間隔（3秒ごとに更新）で監視
+./podman_manager.sh stats-detail 85 90 3
+
+# すべてのしきい値を指定（CPU: 85%, メモリ: 90%, ネットワーク: 100MB, ディスク: 50MB）
+./podman_manager.sh stats-detail 85 90 3 100 50
+```
+
+#### リソース使用状況のレポート生成
+
+```bash
+./podman_manager.sh resource-report
+```
+
+このコマンドは、指定された期間にわたってリソース使用状況を監視し、最小・最大・平均値を含む詳細なレポートを生成します。
+
+##### オプションとパラメータ
+
+- `DURATION`: データ収集期間（秒単位、デフォルト: 60秒）
+- `INTERVAL`: 測定間隔（秒単位、デフォルト: 5秒）
+
+##### 使用例
+
+```bash
+# 60秒間、5秒間隔でリソース使用状況を監視しレポートを生成
+./podman_manager.sh resource-report
+
+# 120秒間、10秒間隔でリソース使用状況を監視しレポートを生成
+./podman_manager.sh resource-report 120 10
+```
+
 #### コンテナイメージのセキュリティスキャン
 
 ```bash
 ./podman_manager.sh security-scan <CONTAINER_NAME>
 ```
 
-このコマンドは、指定したコンテナイメージをスキャンして脆弱性を検出します。TrivyまたはPodmanの内蔵スキャナーを使用します。
+このコマンドは、指定したコンテナイメージをスキャンして脆弱性を検出します。TrivyまたはPodmanの内蔵スキャナーを使用します。拡張版では、設定ミスの検出も可能になりました。
 
 ##### オプションとパラメータ
 
 - `CONTAINER_NAME`: スキャン対象のコンテナ名
 - `OUTPUT_FORMAT`: 結果の出力形式（table, json, sarif、デフォルト: table）
 - `SEVERITY_FILTER`: 表示する脆弱性の重大度（LOW, MEDIUM, HIGH, CRITICAL、デフォルト: HIGH,CRITICAL）
-- `LOG_FILE`: 結果を保存するログファイルのパス（デフォルト: security_scan_results.log）
+- `LOG_FILE`: 結果を保存するログファイルのパス（デフォルト: security_scan_results_YYYYMMDD_HHMMSS.log）
+- `CONFIG_ANALYSIS`: 設定分析を含めるかどうか（true/false、デフォルト: false）
 
 ##### 使用例
 
@@ -437,22 +559,26 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 # JSON形式で結果を出力
 ./podman_manager.sh security-scan mycontainer json
 
+# 全ての重大度の脆弱性と設定分析を含めてスキャン
+./podman_manager.sh security-scan mycontainer json "LOW,MEDIUM,HIGH,CRITICAL" custom_output.log true
+
 # 高～中程度の脆弱性をフィルタリング
-./podman_manager.sh security-scan mycontainer table "HIGH,MEDIUM,Critical" custom_output.log
+./podman_manager.sh security-scan mycontainer table "HIGH,MEDIUM,CRITICAL" custom_output.log false
 ```
 
 #### バッチ操作
 
 ```bash
-./podman_manager.sh batch-operation <OPERATION> <REGEX_PATTERN>
+./podman_manager.sh batch-operation <OPERATION> <REGEX_PATTERN> [CONFIRM]
 ```
 
-このコマンドは、正規表現パターンに一致する複数のコンテナに対して一度に操作を実行します。
+このコマンドは、正規表現パターンに一致する複数のコンテナに対して一度に操作を実行します。バッチ操作機能は強化され、一時停止(pause)/再開(unpause)操作が追加され、確認フラグによる安全な操作が可能になりました。
 
 ##### オプションとパラメータ
 
-- `OPERATION`: 実行する操作（start, stop, restart, remove）
+- `OPERATION`: 実行する操作（start, stop, restart, remove, pause, unpause）
 - `REGEX_PATTERN`: コンテナ名に一致させる正規表現パターン
+- `CONFIRM`: 確認フラグ（省略可、実行前に確認プロンプトを表示）
 
 ##### 使用例
 
@@ -466,8 +592,14 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 # 名前が'app'で終わるすべてのコンテナを開始
 ./podman_manager.sh batch-operation start '.*app$'
 
-# 名前が'alpine-'で始まるすべてのコンテナを削除
-./podman_manager.sh batch-operation remove '^alpine-.*'
+# 名前が'alpine-'で始まるすべてのコンテナを削除（実行前に確認）
+./podman_manager.sh batch-operation remove '^alpine-.*' confirm
+
+# 名前が'cache'を含むすべてのコンテナを一時停止
+./podman_manager.sh batch-operation pause '.*cache.*'
+
+# 名前が'cache'を含むすべてのコンテナを再開
+./podman_manager.sh batch-operation unpause '.*cache.*'
 ```
 
 #### 未使用のリソースをクリーンアップ
@@ -642,6 +774,40 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
    ./podman_manager.sh remove wordpress-mysql
    ```
 
+### 拡張機能の活用例
+
+1. **高度なリソース監視**
+
+```bash
+# カスタマイズされたしきい値でリソース使用状況を監視
+./podman_manager.sh stats-detail 85 90 3 100 50
+
+# 一定時間のリソース使用状況を記録してレポートを生成
+./podman_manager.sh resource-report 300 10
+```
+
+2. **セキュリティスキャンの活用**
+
+```bash
+# イメージの詳細なセキュリティスキャン（設定ミスも検出）
+./podman_manager.sh security-scan mycontainer json "LOW,MEDIUM,HIGH,CRITICAL" my_scan.log true
+
+# セキュリティレポートに基づくアクション
+./podman_manager.sh security-scan mycontainer table "CRITICAL,HIGH" --severity-filter="CRITICAL,HIGH"
+```
+
+3. **高度なバッチ操作**
+
+```bash
+# 一時停止/再開機能の使用
+./podman_manager.sh batch-operation pause '^dev-.*'  # 開発環境のコンテナを一時停止
+
+./podman_manager.sh batch-operation unpause '^dev-.*'  # 開発環境のコンテナを再開
+
+# 危険な操作に対する確認付き実行
+./podman_manager.sh batch-operation remove '^temp-.*' confirm
+```
+
 ## 注意事項
 
 - このスクリプトはPodmanがシステムに正しくインストールされていることを前提としています。
@@ -732,6 +898,25 @@ abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
 - **パターンに一致するコンテナが見つからない**: 正規表現パターンが正しいか確認してください
 - **操作が一部のコンテナで失敗する**: 個々のコンテナが他の操作によって変更されている可能性があります
 - **不正な操作コマンド**: 使用できる操作は start, stop, restart, remove のいずれかのみです
+
+### リソースレポート (resource-report) の問題
+
+- **データが収集されない**: 監視対象のコンテナが実行中であるか確認してください
+- **統計情報が表示されない**: Podmanの統計機能が利用可能であるか確認してください
+- **レポートの生成に時間がかかる**: 収集期間が長すぎる場合、短めの期間で試してください
+
+### 拡張されたバッチ操作 (batch-operation) の問題
+
+- **パターンに一致するコンテナが見つからない**: 正規表現パターンが正しいか確認してください
+- **操作が一部のコンテナで失敗する**: 個々のコンテナが他の操作によって変更されている可能性があります
+- **新しい操作タイプ (pause/unpause) が使えない**: 使用できる操作は start, stop, restart, remove, pause, unpause のいずれかのみです
+- **確認フラグが機能しない**: コマンドライン引数が正しく渡されているか確認してください
+
+### 拡張されたセキュリティスキャン (security-scan) の問題
+
+- **設定分析が有効にならない**: 5番目のパラメータとして "true" を指定しているか確認してください
+- **JSON出力が正しくない**: jqコマンドがインストールされているか確認してください
+- **カスタムログファイル名が認識されない**: ファイルパスが有効であるか確認してください
 
 ### その他の問題
 
@@ -838,6 +1023,30 @@ A:
 ### Q8: ルートユーザー以外でも使用できますか？
 
 A: はい、Podmanはrootless（非root）モードに対応しているので、通常のユーザー権限でも使用できます。ただし、一部のネットワーク設定や特定のシステムレベルの操作には特別な設定が必要になる場合があります。
+
+### Q9: statsとstats-detail、resource-reportの違いは何ですか？
+
+A:
+- `stats`コマンド: 基本的なリソース使用状況（CPU、メモリ、ネットワークI/O）を一度だけ表示
+- `stats-detail`コマンド: 詳細なリソース情報をリアルタイムに監視し、設定したしきい値を超えた場合に警告を表示
+- `resource-report`コマンド: 指定された期間にわたってリソース使用状況を監視し、最小・最大・平均値を含む詳細なレポートを生成
+
+### Q10: バッチ操作に追加されたpause/unpauseとは何ですか？
+
+A: `pause`と`unpause`はコンテナの実行状態を一時停止/再開するための操作です。これにより、コンテナを完全に停止することなくリソース消費を一時的に止めることができます。バッチ操作では、複数のコンテナを一度に一時停止または再開できます。
+
+### Q11: セキュリティスキャンの設定分析とは何ですか？
+
+A: セキュリティスキャンでの設定分析は、コンテナイメージ内のセキュリティ上の誤った設定や脆弱な構成を検出する機能です。例えば、管理者権限で実行されるべきではないプロセスがrootで実行されていること、公開すべきでないポートが開放されていることなどを検出します。
+
+### Q12: 確認付きバッチ操作の使用方法を教えてください
+
+A: 確認付きバッチ操作は、危険な操作（特に削除操作）を実行する前に確認を求めます。使用方法は次の通りです：
+```bash
+# 確認付きでバッチ操作を実行
+./podman_manager.sh batch-operation remove '^temp-.*' confirm
+```
+実行すると、指定されたパターンに一致するコンテナの一覧が表示され、操作を実行するか確認されます。
 
 ## エラー処理
 
