@@ -31,9 +31,10 @@ usage() {
     echo "  status CONTAINER_NAME   Show detailed status of a specific container"
     echo "  ps                      Show running containers only"
     echo "  stats                   Show resource usage statistics"
-    echo "  stats-detail [CPU_THRESHOLD] [MEM_THRESHOLD] [INTERVAL] Show detailed resource usage statistics with alert thresholds"
-    echo "  security-scan CONTAINER_NAME [OUTPUT_FORMAT] [SEVERITY_FILTER] [LOG_FILE]  Perform security scan on a container image"
-    echo "  batch-operation OPERATION REGEX_PATTERN Perform batch operation on multiple containers matching the pattern"
+    echo "  stats-detail [CPU_THRESHOLD] [MEM_THRESHOLD] [INTERVAL] [NETWORK_THRESHOLD] [DISK_THRESHOLD] Show detailed resource usage statistics with alert thresholds"
+    echo "  resource-report [DURATION] [INTERVAL] Generate a resource usage report over time"
+    echo "  security-scan CONTAINER_NAME [OUTPUT_FORMAT] [SEVERITY_FILTER] [LOG_FILE] [CONFIG_ANALYSIS] Perform security scan on a container image"
+    echo "  batch-operation OPERATION REGEX_PATTERN [CONFIRM] Perform batch operation on multiple containers matching the pattern"
     echo "  help                    Show this help message"
     echo ""
     echo "Examples:"
@@ -43,8 +44,13 @@ usage() {
     echo "  $0 monitor"
     echo "  $0 stats-detail         # Monitor with default thresholds (CPU: 80%, MEM: 90%)"
     echo "  $0 stats-detail 90 95   # Monitor with custom thresholds (CPU: 90%, MEM: 95%)"
+    echo "  $0 stats-detail 90 95 3 100 50  # Monitor with custom thresholds including network (100MB) and disk (50MB)"
+    echo "  $0 resource-report      # Generate report for 60s with 5s intervals"
+    echo "  $0 resource-report 120 10  # Generate report for 120s with 10s intervals"
     echo "  $0 security-scan mycontainer  # Scan container image for vulnerabilities"
+    echo "  $0 security-scan mycontainer json HIGH,CRITICAL,LOW my_scan.log true  # Scan with config analysis"
     echo "  $0 batch-operation stop '^web.*'  # Stop all containers whose names start with 'web'"
+    echo "  $0 batch-operation stop '^web.*' confirm  # Stop with confirmation"
     echo ""
 }
 
@@ -238,9 +244,17 @@ show_detailed_stats() {
     local cpu_threshold=${1:-80}
     local mem_threshold=${2:-90}
     local interval=${3:-2}
+    local network_threshold=${4:-""}  # Optional network usage threshold in MB
+    local disk_threshold=${5:-""}     # Optional disk usage threshold in MB
 
     echo -e "${BLUE}Detailed container resource usage statistics (Ctrl+C to stop):${NC}"
     echo "Alert thresholds: CPU > ${cpu_threshold}%, Memory > ${mem_threshold}%"
+    if [[ -n "$network_threshold" ]]; then
+        echo "Network threshold: > ${network_threshold}MB"
+    fi
+    if [[ -n "$disk_threshold" ]]; then
+        echo "Disk threshold: > ${disk_threshold}MB"
+    fi
     echo ""
 
     # Check if podman stats supports the format we need
@@ -256,6 +270,12 @@ show_detailed_stats() {
         clear
         echo -e "${BLUE}Detailed container resource usage statistics (Ctrl+C to stop):${NC}"
         echo "Alert thresholds: CPU > ${cpu_threshold}%, Memory > ${mem_threshold}%"
+        if [[ -n "$network_threshold" ]]; then
+            echo "Network threshold: > ${network_threshold}MB"
+        fi
+        if [[ -n "$disk_threshold" ]]; then
+            echo "Disk threshold: > ${disk_threshold}MB"
+        fi
         echo ""
 
         # Print header
@@ -270,32 +290,73 @@ show_detailed_stats() {
             fi
 
             # Extract numeric values for comparison
-            cpu_num=$(echo "$cpu" | sed 's/%//')
-            mem_percent=$(echo "$mem" | sed 's/%//')
+            cpu_num=$(echo "$cpu" | sed 's/%//' | sed 's/ *$//g')
+            mem_percent=$(echo "$mem" | sed 's/%//' | sed 's/ *$//g')
+
+            # Extract network and block IO numbers for comparison if thresholds are set
+            net_rx_mb=$(echo "$netio" | awk -F'[ /]' '{print $1}' | sed 's/M$//')
+            net_tx_mb=$(echo "$netio" | awk -F'[ /]' '{print $4}' | sed 's/M$//')
+
+            # Extract block IO if available
+            block_read_mb=$(echo "$blockio" | awk -F'[ /]' '{print $1}' | sed 's/M$//' 2>/dev/null || echo 0)
+            block_write_mb=$(echo "$blockio" | awk -F'[ /]' '{print $4}' | sed 's/M$//' 2>/dev/null || echo 0)
 
             # Determine if alert thresholds are exceeded
             cpu_alert=""
             mem_alert=""
+            net_alert=""
+            disk_alert=""
 
-            if (( $(echo "$cpu_num > $cpu_threshold" | bc -l) )); then
+            if (( $(echo "$cpu_num > $cpu_threshold" | bc -l 2>/dev/null || echo 0) )); then
                 cpu_alert=" ${RED}[HIGH CPU!]${NC}"
             fi
 
-            if (( $(echo "$mem_percent > $mem_threshold" | bc -l) )); then
+            if (( $(echo "$mem_percent > $mem_threshold" | bc -l 2>/dev/null || echo 0) )); then
                 mem_alert=" ${RED}[HIGH MEM!]${NC}"
             fi
 
+            # Check network threshold if provided
+            if [[ -n "$network_threshold" ]]; then
+                total_net_mb=$(echo "$net_rx_mb + $net_tx_mb" | bc -l 2>/dev/null || echo 0)
+                if (( $(echo "$total_net_mb > $network_threshold" | bc -l 2>/dev/null || echo 0) )); then
+                    net_alert=" ${RED}[HIGH NET!]${NC}"
+                fi
+            fi
+
+            # Check disk threshold if provided
+            if [[ -n "$disk_threshold" ]]; then
+                total_disk_mb=$(echo "$block_read_mb + $block_write_mb" | bc -l 2>/dev/null || echo 0)
+                if (( $(echo "$total_disk_mb > $disk_threshold" | bc -l 2>/dev/null || echo 0) )); then
+                    disk_alert=" ${RED}[HIGH DISK!]${NC}"
+                fi
+            fi
+
             # Set color based on alert status
-            if [[ -n "$cpu_alert" ]] || [[ -n "$mem_alert" ]]; then
+            if [[ -n "$cpu_alert" ]] || [[ -n "$mem_alert" ]] || [[ -n "$net_alert" ]] || [[ -n "$disk_alert" ]]; then
                 color="${RED}"
             else
                 color="${GREEN}"
             fi
 
             # Format output with alert indicators
-            printf "${color}%-20s${NC} %-10s %-10s %-20s %-10s %-20s %-20s %s%s%s\n" \
-                "$name" "$pid" "$cpu" "$mem_usage" "$mem" "$netio" "$blockio" "$status" "$cpu_alert" "$mem_alert"
+            printf "${color}%-20s${NC} %-10s %-10s %-20s %-10s %-20s %-20s %s%s%s%s%s\n" \
+                "$name" "$pid" "$cpu" "$mem_usage" "$mem" "$netio" "$blockio" "$status" "$cpu_alert" "$mem_alert" "$net_alert" "$disk_alert"
         done
+
+        # Show additional container-specific disk usage information
+        echo ""
+        echo -e "${BLUE}Additional Resource Information:${NC}"
+        echo "Container Disk Usage (Top 10):"
+        podman ps --format "{{.ID}}|{{.Names}}" | tail -n +2 | while IFS='|' read -r id name; do
+            if [[ -n "$id" ]]; then
+                # Get container rootfs size
+                size_info=$(podman container inspect "$id" 2>/dev/null | jq -r '.[].SizeRootFs // empty' 2>/dev/null)
+                if [[ -n "$size_info" && "$size_info" != "null" ]]; then
+                    size_mb=$((size_info / 1024 / 1024))
+                    printf "  %s (%s): %d MB\n" "$name" "$id" "$size_mb"
+                fi
+            fi
+        done | head -10
 
         echo ""
         echo "Next update in ${interval}s... Press Ctrl+C to stop"
@@ -304,12 +365,106 @@ show_detailed_stats() {
     done
 }
 
+# Function to monitor resource usage and generate reports
+resource_monitor_report() {
+    local report_duration=${1:-60}  # Duration in seconds to collect data
+    local report_interval=${2:-5}   # Interval in seconds between measurements
+    local report_file="resource_report_$(date +%Y%m%d_%H%M%S).txt"
+
+    echo -e "${BLUE}Collecting resource usage data for ${report_duration}s...${NC}"
+
+    # Initialize arrays to store data
+    declare -A cpu_data
+    declare -A mem_data
+    declare -A container_names
+
+    local collected_samples=0
+    local total_samples=$((report_duration / report_interval))
+
+    # Collect data over time
+    for i in $(seq 1 $total_samples); do
+        echo -e "${YELLOW}Collecting sample $i/$total_samples...${NC}"
+
+        podman stats --no-stream --format "{{.Name}}|{{.CPU}}|{{.Mem}}" 2>/dev/null | while IFS='|' read -r name cpu mem; do
+            if [[ "$name" != "NAME" && -n "$name" ]]; then
+                # Store container name
+                container_names["$name"]=1
+
+                # Extract numeric values
+                cpu_val=$(echo "$cpu" | sed 's/%//')
+                mem_val=$(echo "$mem" | sed 's/%//')
+
+                # Append to data arrays
+                if [[ -n "${cpu_data[$name]+isset}" ]]; then
+                    cpu_data["$name"]="${cpu_data[$name]},$cpu_val"
+                    mem_data["$name"]="${mem_data[$name]},$mem_val"
+                else
+                    cpu_data["$name"]="$cpu_val"
+                    mem_data["$name"]="$mem_val"
+                fi
+            fi
+        done
+
+        sleep "$report_interval"
+        collected_samples=$((collected_samples + 1))
+    done
+
+    # Generate report
+    echo -e "${GREEN}Generating resource usage report...${NC}"
+    {
+        echo "PODMAN RESOURCE USAGE REPORT"
+        echo "Generated on: $(date)"
+        echo "Duration: ${report_duration}s, Sample interval: ${report_interval}s"
+        echo "==========================================="
+        echo ""
+
+        # For each container, calculate min/max/avg values
+        for container in "${!container_names[@]}"; do
+            echo "Container: $container"
+
+            # Calculate CPU stats
+            IFS=',' read -ra cpu_vals <<< "${cpu_data[$container]}"
+            local cpu_sum=0
+            local cpu_min=100
+            local cpu_max=0
+            for val in "${cpu_vals[@]}"; do
+                if (( $(echo "$val > $cpu_max" | bc -l 2>/dev/null || echo 0) )); then cpu_max=$val; fi
+                if (( $(echo "$val < $cpu_min" | bc -l 2>/dev/null || echo 0) )); then cpu_min=$val; fi
+                cpu_sum=$(echo "$cpu_sum + $val" | bc -l 2>/dev/null || echo 0)
+            done
+            local cpu_avg=$(echo "$cpu_sum / ${#cpu_vals[@]}" | bc -l 2>/dev/null || echo 0)
+
+            # Calculate Memory stats
+            IFS=',' read -ra mem_vals <<< "${mem_data[$container]}"
+            local mem_sum=0
+            local mem_min=100
+            local mem_max=0
+            for val in "${mem_vals[@]}"; do
+                if (( $(echo "$val > $mem_max" | bc -l 2>/dev/null || echo 0) )); then mem_max=$val; fi
+                if (( $(echo "$val < $mem_min" | bc -l 2>/dev/null || echo 0) )); then mem_min=$val; fi
+                mem_sum=$(echo "$mem_sum + $val" | bc -l 2>/dev/null || echo 0)
+            done
+            local mem_avg=$(echo "$mem_sum / ${#mem_vals[@]}" | bc -l 2>/dev/null || echo 0)
+
+            printf "  CPU: Min=%.2f%%, Max=%.2f%%, Avg=%.2f%%\n" "$cpu_min" "$cpu_max" "$cpu_avg"
+            printf "  Mem: Min=%.2f%%, Max=%.2f%%, Avg=%.2f%%\n" "$mem_min" "$mem_max" "$mem_avg"
+            echo ""
+        done
+    } > "$report_file"
+
+    echo -e "${GREEN}Report saved to: $report_file${NC}"
+    echo ""
+    echo -e "${BLUE}Summary:${NC}"
+    cat "$report_file" | grep -E "(Container:|Avg=)" | grep -v "Min=" | grep -v "Max="
+}
+
 # Function to perform security scan on container images
 security_scan() {
     local container_name="$1"
     local output_format="${2:-table}"  # table, json, or sarif
     local severity_filter="${3:-HIGH,CRITICAL}"  # LOW, MEDIUM, HIGH, CRITICAL
-    local log_file="${4:-security_scan_results.log}"
+    local log_file="${4:-security_scan_results_$(date +%Y%m%d_%H%M%S).log}"
+    local include_config_analysis="${5:-false}"  # Whether to include configuration analysis
 
     if [[ -z "$container_name" ]]; then
         echo -e "${RED}Error: Container name is required${NC}" >&2
@@ -340,7 +495,12 @@ security_scan() {
         echo -e "${BLUE}Using Trivy for security scanning...${NC}"
 
         # Prepare trivy scan command with severity filter
-        local trivy_cmd="trivy image --security-checks vuln -f $output_format --vuln-type os,library --severity $severity_filter \"$image_name\""
+        local trivy_cmd="trivy image --security-checks vuln,config -f $output_format --vuln-type os,library --severity $severity_filter \"$image_name\""
+
+        # If configuration analysis is enabled, add the config scan
+        if [[ "$include_config_analysis" == "true" ]]; then
+            trivy_cmd="trivy image --security-checks vuln,config -f $output_format --vuln-type os,library --severity $severity_filter --scanners vuln,config \"$image_name\""
+        fi
 
         # Execute the scan and save to log file
         if eval $trivy_cmd > "$log_file" 2>/dev/null; then
@@ -348,15 +508,31 @@ security_scan() {
 
             # Display filtered results highlighting important vulnerabilities
             echo -e "${BLUE}Scan Results:${NC}"
-            cat "$log_file" | while IFS= read -r line; do
-                if [[ $line =~ CRITICAL|HIGH ]]; then
-                    echo -e "${RED}$line${NC}"
-                elif [[ $line =~ MEDIUM ]]; then
-                    echo -e "${YELLOW}$line${NC}"
+
+            # Display only the most critical information based on output format
+            if [[ "$output_format" == "table" ]]; then
+                # For table format, highlight critical sections
+                cat "$log_file" | while IFS= read -r line; do
+                    if [[ $line =~ CRITICAL|HIGH ]]; then
+                        echo -e "${RED}$line${NC}"
+                    elif [[ $line =~ MEDIUM ]]; then
+                        echo -e "${YELLOW}$line${NC}"
+                    elif [[ $line =~ SEVERITY|VULNERABILITY|TOTAL ]]; then
+                        echo -e "${BLUE}$line${NC}"
+                    else
+                        echo "$line"
+                    fi
+                done
+            elif [[ "$output_format" == "json" ]]; then
+                # For JSON, pretty print and highlight issues
+                if command -v jq &> /dev/null; then
+                    cat "$log_file" | jq .
                 else
-                    echo "$line"
+                    cat "$log_file"
                 fi
-            done
+            else
+                cat "$log_file"
+            fi
 
             # Count vulnerabilities by severity
             local critical_count=$(grep -c "CRITICAL" "$log_file" 2>/dev/null || echo 0)
@@ -370,6 +546,12 @@ security_scan() {
             echo -e "${RED}HIGH: $high_count${NC}"
             echo -e "${YELLOW}MEDIUM: $medium_count${NC}"
             echo "LOW: $low_count"
+
+            # Also analyze misconfigurations if config analysis was included
+            if [[ "$include_config_analysis" == "true" ]]; then
+                local misconfig_count=$(grep -i -c "misconfig\|configuration\|config_issue" "$log_file" 2>/dev/null || echo 0)
+                echo -e "${YELLOW}CONFIG ISSUES: $misconfig_count${NC}"
+            fi
 
             if [ "$critical_count" -gt 0 ] || [ "$high_count" -gt 0 ]; then
                 echo -e "${RED}WARNING: Critical or High severity vulnerabilities detected!${NC}"
@@ -405,25 +587,58 @@ security_scan() {
         fi
     else
         echo -e "${RED}Error: Neither Trivy nor Podman security scanning is available${NC}" >&2
-        echo -e "${YELLOW}Install Trivy (https://aquasecurity.github.io/trivy/) for security scanning capabilities${NC}" >&2
+        echo -e "${YELLOW}Install Trivy (https://aquasecurity.github.io/trivy/) for comprehensive security scanning capabilities${NC}" >&2
         return 1
     fi
+
+    # Generate security recommendations based on findings
+    generate_security_recommendations "$image_name" "$critical_count" "$high_count" "$medium_count" "$low_count"
+}
+
+# Function to generate security recommendations based on scan results
+generate_security_recommendations() {
+    local image_name="$1"
+    local critical_count="$2"
+    local high_count="$3"
+    local medium_count="$4"
+    local low_count="$5"
+
+    echo ""
+    echo -e "${BLUE}Security Recommendations:${NC}"
+
+    if [ "$critical_count" -gt 0 ] || [ "$high_count" -gt 0 ]; then
+        echo -e "${RED}- CRITICAL/HIGH vulnerabilities detected: Update to latest patched version${NC}"
+        echo -e "${RED}- Consider using an alternative image with fewer vulnerabilities${NC}"
+    fi
+
+    if [ "$medium_count" -gt 0 ]; then
+        echo -e "${YELLOW}- Medium vulnerabilities: Review and patch as soon as possible${NC}"
+    fi
+
+    if [ "$low_count" -gt 0 ]; then
+        echo -e "${BLUE}- Low vulnerabilities: Monitor for future updates${NC}"
+    fi
+
+    echo "- Consider implementing a regular security scanning schedule"
+    echo "- Verify image signatures and source authenticity"
+    echo "- Use minimal base images to reduce attack surface"
 }
 
 # Function to perform batch operations on multiple containers
 batch_operation() {
     local operation="$1"
     local pattern="$2"
+    local confirmation_flag="${3:-false}"  # Optional flag for confirmation before executing operations
 
     if [[ -z "$operation" ]] || [[ -z "$pattern" ]]; then
         echo -e "${RED}Error: Both operation and pattern are required${NC}" >&2
-        echo "Usage: $0 batch-operation [start|stop|restart|remove] REGEX_PATTERN"
+        echo "Usage: $0 batch-operation [start|stop|restart|remove|pause|unpause] REGEX_PATTERN [confirm]"
         return 1
     fi
 
     # Validate operation
-    if [[ ! "$operation" =~ ^(start|stop|restart|remove)$ ]]; then
-        echo -e "${RED}Error: Invalid operation '$operation'. Valid operations: start, stop, restart, remove${NC}" >&2
+    if [[ ! "$operation" =~ ^(start|stop|restart|remove|pause|unpause)$ ]]; then
+        echo -e "${RED}Error: Invalid operation '$operation'. Valid operations: start, stop, restart, remove, pause, unpause${NC}" >&2
         return 1
     fi
 
@@ -443,21 +658,67 @@ batch_operation() {
     fi
 
     echo -e "${BLUE}Found containers matching pattern '$pattern':${NC}"
-    echo "$matched_containers" | while read -r container; do
+    local container_list=()
+    while IFS= read -r container; do
         if [[ -n "$container" ]]; then
+            container_list+=("$container")
             echo "  - $container"
         fi
-    done
+    done <<< "$matched_containers"
+
+    # If confirmation flag is set, ask for confirmation before proceeding
+    if [[ "$confirmation_flag" == "confirm" ]]; then
+        echo ""
+        echo -e "${YELLOW}Do you want to proceed with $operation operation on ${#container_list[@]} containers? (yes/no):${NC}"
+        read -r confirm
+        if [[ ! "$confirm" =~ ^[Yy][Ee][Ss]$ ]]; then
+            echo -e "${YELLOW}Operation cancelled by user.${NC}"
+            return 0
+        fi
+    fi
 
     echo ""
     echo -e "${BLUE}Executing batch operation '$operation'...${NC}"
+
+    # Additional function for pause/unpause since these aren't defined yet
+    pause_container() {
+        local container_name="$1"
+        if [[ -z "$container_name" ]]; then
+            echo -e "${RED}Error: Container name is required${NC}" >&2
+            return 1
+        fi
+
+        echo -e "${YELLOW}Pausing container '$container_name'...${NC}"
+        if podman pause "$container_name"; then
+            echo -e "${GREEN}Container '$container_name' paused successfully${NC}"
+        else
+            echo -e "${RED}Failed to pause container '$container_name'${NC}" >&2
+            return 1
+        fi
+    }
+
+    unpause_container() {
+        local container_name="$1"
+        if [[ -z "$container_name" ]]; then
+            echo -e "${RED}Error: Container name is required${NC}" >&2
+            return 1
+        fi
+
+        echo -e "${YELLOW}Unpausing container '$container_name'...${NC}"
+        if podman unpause "$container_name"; then
+            echo -e "${GREEN}Container '$container_name' unpaused successfully${NC}"
+        else
+            echo -e "${RED}Failed to unpause container '$container_name'${NC}" >&2
+            return 1
+        fi
+    }
 
     # Temporary files to track results
     local temp_successful=$(mktemp)
     local temp_failed=$(mktemp)
 
     # Process each matched container
-    while IFS= read -r container; do
+    for container in "${container_list[@]}"; do
         if [[ -n "$container" ]]; then
             echo -e "${YELLOW}Processing container '$container'...${NC}"
 
@@ -498,9 +759,27 @@ batch_operation() {
                         echo -e "${RED}Failed to remove container '$container'${NC}"
                     fi
                     ;;
+                "pause")
+                    if pause_container "$container"; then
+                        echo "$container" >> "$temp_successful"
+                        echo -e "${GREEN}Successfully paused container '$container'${NC}"
+                    else
+                        echo "$container" >> "$temp_failed"
+                        echo -e "${RED}Failed to pause container '$container'${NC}"
+                    fi
+                    ;;
+                "unpause")
+                    if unpause_container "$container"; then
+                        echo "$container" >> "$temp_successful"
+                        echo -e "${GREEN}Successfully unpaused container '$container'${NC}"
+                    else
+                        echo "$container" >> "$temp_failed"
+                        echo -e "${RED}Failed to unpause container '$container'${NC}"
+                    fi
+                    ;;
             esac
         fi
-    done <<< "$matched_containers"
+    done
 
     # Read results from temp files
     local successful_operations=()
@@ -526,6 +805,7 @@ batch_operation() {
     echo -e "${BLUE}Batch operation summary:${NC}"
     echo -e "Operation: ${YELLOW}$operation${NC}"
     echo -e "Pattern: ${YELLOW}$pattern${NC}"
+    echo -e "Confirmation used: ${YELLOW}$confirmation_flag${NC}"
     echo -e "Total containers processed: ${#successful_operations[@] + #failed_operations[@]}"
     echo -e "Successful: ${GREEN}${#successful_operations[@]}${NC}"
     echo -e "Failed: ${RED}${#failed_operations[@]}${NC}"
@@ -595,13 +875,19 @@ main() {
             show_stats
             ;;
         "stats-detail")
-            show_detailed_stats "${2:-80}" "${3:-90}" "${4:-2}"
+            show_detailed_stats "${2:-80}" "${3:-90}" "${4:-2}" "${5:-""}" "${6:-""}"
+            ;;
+        "resource-report")
+            resource_monitor_report "${2:-60}" "${3:-5}"
             ;;
         "security-scan")
-            security_scan "${2:-}" "${3:-table}" "${4:-HIGH,CRITICAL}" "${5:-security_scan_results.log}"
+            security_scan "${2:-}" "${3:-table}" "${4:-HIGH,CRITICAL}" "${5:-security_scan_results_$(date +%Y%m%d_%H%M%S).log}" "${6:-false}"
             ;;
         "batch-operation")
-            batch_operation "${2:-}" "${3:-}"
+            batch_operation "${2:-}" "${3:-}" "${4:-false}"
+            ;;
+        "resource-report")
+            resource_monitor_report "${2:-60}" "${3:-5}"
             ;;
         "help"|"-h"|"--help")
             usage

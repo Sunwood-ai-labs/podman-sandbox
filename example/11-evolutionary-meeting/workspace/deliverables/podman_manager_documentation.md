@@ -9,6 +9,70 @@
 - Podmanがインストールされていること
 - Podmanが正しく動作すること
 - jqがインストールされていること（詳細なリソース表示のために必要）
+- bcがインストールされていること（詳細なリソース統計表示のために推奨）
+- sedがインストールされていること（詳細なリソース統計表示のために推奨）
+
+### 前提条件の確認方法
+
+新しいユーザーのために、必要なツールがシステムにインストールされているか確認する方法を紹介します。
+
+```bash
+# Podmanがインストールされているか確認
+podman --version
+
+# jqがインストールされているか確認
+jq --version
+
+# bcがインストールされているか確認
+bc --version
+
+# sedがインストールされているか確認
+sed --version
+```
+
+### 前提条件のインストール方法（Ubuntu/Debianの場合）
+
+```bash
+# Podmanのインストール
+sudo apt update
+sudo apt install -y podman
+
+# jqのインストール
+sudo apt install -y jq
+
+# bcのインストール
+sudo apt install -y bc
+
+# Trivy（セキュリティスキャン用）のインストール
+sudo apt install -y wget apt-transport-https gnupg
+wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
+echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
+sudo apt update
+sudo apt install -y trivy
+```
+
+## Podman入門ガイド
+
+PodmanはDockerに代わるコンテナランタイムであり、root権限なしでコンテナを実行できます。以下は基本的な概念の説明です：
+
+- **コンテナ**: アプリケーションとその依存関係を含む軽量な仮想環境
+- **イメージ**: コンテナを作成するためのテンプレート
+- **Podmanデーモンレス**: Dockerとは異なり、常駐プロセス（デーモン）を必要としません
+- **Rootless**: 通常のユーザー権限でコンテナを実行可能
+
+### 基本的なPodmanコマンド
+
+| コマンド | 説明 |
+|----------|------|
+| `podman run` | 新しいコンテナを実行 |
+| `podman ps` | 実行中のコンテナをリスト表示 |
+| `podman images` | 利用可能なイメージをリスト表示 |
+| `podman pull` | レジストリからイメージをダウンロード |
+| `podman stop` | 実行中のコンテナを停止 |
+| `podman start` | 停止中のコンテナを開始 |
+| `podman logs` | コンテナのログを表示 |
+
+このスクリプト(`podman_manager.sh`)はこれらの基本的なPodmanコマンドをより使いやすくラップしたものです。
 
 ## 使用方法
 
@@ -20,12 +84,222 @@
 chmod +x podman_manager.sh
 ```
 
+### 基本的な使用手順
+
+新しいユーザー向けに、スクリプトを最初に使用する際の手順を説明します。
+
+1. **権限の設定**: 上記のように実行権限を設定します。
+2. **ヘルプの確認**: 使用可能なコマンドを確認します。
+   ```bash
+   ./podman_manager.sh --help
+   ```
+3. **コンテナの確認**: 現在のシステムにあるコンテナを確認します。
+   ```bash
+   ./podman_manager.sh list
+   ```
+
 ### 操作コマンド
 
 #### すべてのコンテナを一覧表示
 
 ```bash
 ./podman_manager.sh list
+```
+
+このコマンドは、実行中・停止中のすべてのコンテナを表示します。表示される情報には、コンテナID、名前、イメージ、状態、ポートが含まれます。
+
+##### 出力例
+```
+Listing all containers:
+CONTAINER ID  NAMES      IMAGE               STATUS                       PORTS
+d9b100f2f636  my-nginx   docker.io/library/nginx:latest  Up 2 hours ago              0.0.0.0:8080->80/tcp
+abc234def567  my-db      docker.io/library/postgres:13   Exited (0) 3 days ago
+```
+
+#### 特定のコンテナの状態を確認
+
+```bash
+./podman_manager.sh status <CONTAINER_ID>
+```
+
+#### コンテナを起動
+
+```bash
+./podman_manager.sh start <CONTAINER_ID>
+```
+
+#### コンテナを停止
+
+```bash
+./podman_manager.sh stop <CONTAINER_ID>
+```
+
+#### コンテナを再起動
+
+```bash
+./podman_manager.sh restart <CONTAINER_ID>
+```
+
+#### コンテナのログを表示
+
+```bash
+./podman_manager.sh logs <CONTAINER_ID>
+```
+
+#### コンテナのログをリアルタイムで表示
+
+```bash
+./podman_manager.sh logs <CONTAINER_ID> follow
+```
+
+#### すべてのコンテナを継続的に監視
+
+```bash
+./podman_manager.sh monitor
+```
+
+#### すべてのコンテナのヘルスチェックを実行
+
+```bash
+./podman_manager.sh health-check
+```
+
+#### 特定のコンテナのヘルスチェックを実行
+
+```bash
+./podman_manager.sh health-check <CONTAINER_ID>
+```
+
+#### 新しいセキュアなコンテナを作成
+
+```bash
+./podman_manager.sh create <IMAGE> <NAME> [OPTIONS]
+```
+
+#### 実行中のコンテナでコマンドを実行
+
+```bash
+./podman_manager.sh exec <CONTAINER_ID> <COMMAND>
+```
+
+#### 停止したコンテナを削除
+
+```bash
+./podman_manager.sh remove <CONTAINER_ID>
+```
+
+#### コンテナの詳細情報を表示
+
+```bash
+./podman_manager.sh inspect <CONTAINER_ID>
+```
+
+#### すべてのコンテナのリソース使用状況を表示
+
+```bash
+./podman_manager.sh stats
+```
+
+#### 詳細なリソース使用状況を表示（アラートしきい値付き）
+
+```bash
+./podman_manager.sh stats-detail
+```
+
+このコマンドは、CPUとメモリの使用率が指定したしきい値を超えたときに警告を表示するリソースモニタリング機能を提供します。
+
+##### オプションとパラメータ
+
+- `CPU_THRESHOLD`: CPU使用率の警告しきい値（デフォルト: 80%）
+- `MEM_THRESHOLD`: メモリ使用率の警告しきい値（デフォルト: 90%）
+- `INTERVAL`: 更新間隔（秒単位、デフォルト: 2秒）
+
+##### 使用例
+
+```bash
+# デフォルトのしきい値（CPU: 80%, メモリ: 90%）で監視
+./podman_manager.sh stats-detail
+
+# カスタムしきい値（CPU: 90%, メモリ: 95%）で監視
+./podman_manager.sh stats-detail 90 95
+
+# カスタムしきい値と更新間隔（3秒ごとに更新）で監視
+./podman_manager.sh stats-detail 85 90 3
+```
+
+#### コンテナイメージのセキュリティスキャン
+
+```bash
+./podman_manager.sh security-scan <CONTAINER_NAME>
+```
+
+このコマンドは、指定したコンテナイメージをスキャンして脆弱性を検出します。TrivyまたはPodmanの内蔵スキャナーを使用します。
+
+##### オプションとパラメータ
+
+- `CONTAINER_NAME`: スキャン対象のコンテナ名
+- `OUTPUT_FORMAT`: 結果の出力形式（table, json, sarif、デフォルト: table）
+- `SEVERITY_FILTER`: 表示する脆弱性の重大度（LOW, MEDIUM, HIGH, CRITICAL、デフォルト: HIGH,CRITICAL）
+- `LOG_FILE`: 結果を保存するログファイルのパス（デフォルト: security_scan_results.log）
+
+##### 使用例
+
+```bash
+# 指定したコンテナのイメージをデフォルト設定でスキャン
+./podman_manager.sh security-scan mycontainer
+
+# JSON形式で結果を出力
+./podman_manager.sh security-scan mycontainer json
+
+# 高～中程度の脆弱性をフィルタリング
+./podman_manager.sh security-scan mycontainer table "HIGH,MEDIUM,Critical" custom_output.log
+```
+
+#### バッチ操作
+
+```bash
+./podman_manager.sh batch-operation <OPERATION> <REGEX_PATTERN>
+```
+
+このコマンドは、正規表現パターンに一致する複数のコンテナに対して一度に操作を実行します。
+
+##### オプションとパラメータ
+
+- `OPERATION`: 実行する操作（start, stop, restart, remove）
+- `REGEX_PATTERN`: コンテナ名に一致させる正規表現パターン
+
+##### 使用例
+
+```bash
+# 名前が'web'で始まるすべてのコンテナを停止
+./podman_manager.sh batch-operation stop '^web.*'
+
+# 名前が'db'を含むすべてのコンテナを再起動
+./podman_manager.sh batch-operation restart '.*db.*'
+
+# 名前が'app'で終わるすべてのコンテナを開始
+./podman_manager.sh batch-operation start '.*app$'
+
+# 名前が'alpine-'で始まるすべてのコンテナを削除
+./podman_manager.sh batch-operation remove '^alpine-.*'
+```
+
+#### 未使用のリソースをクリーンアップ
+
+```bash
+./podman_manager.sh prune
+```
+
+#### ヘルプを表示
+
+```bash
+./podman_manager.sh -h
+```
+
+または
+
+```bash
+./podman_manager.sh --help
 ```
 
 #### 特定のコンテナの状態を確認
@@ -272,6 +546,102 @@ chmod +x podman_manager.sh
 ./podman_manager.sh exec my-nginx sh
 ```
 
+### 初心者向けチュートリアル：WordPressサイトをセットアップする
+
+このセクションでは、初心者が実際にPodman Managerを使用してWordPressサイトをセットアップする手順を説明します。
+
+1. **MySQLデータベースコンテナを作成**
+
+   まず、WordPress用のデータベースコンテナを作成します。
+
+   ```bash
+   # MySQL 8を実行するコンテナを作成
+   podman run -d \
+     --name wordpress-mysql \
+     -e MYSQL_ROOT_PASSWORD=rootpassword \
+     -e MYSQL_DATABASE=wordpress \
+     -e MYSQL_USER=wp_user \
+     -e MYSQL_PASSWORD=wp_password \
+     -p 3306:3306 \
+     mysql:8
+   ```
+
+2. **WordPressコンテナを作成**
+
+   次に、上で作成したデータベースに接続するWordPressコンテナを作成します。
+
+   ```bash
+   # WordPressコンテナを作成
+   podman run -d \
+     --name my-wordpress \
+     -e WORDPRESS_DB_HOST=wordpress-mysql \
+     -e WORDPRESS_DB_USER=wp_user \
+     -e WORDPRESS_DB_PASSWORD=wp_password \
+     -e WORDPRESS_DB_NAME=wordpress \
+     -p 8080:80 \
+     --link wordpress-mysql:mysql \
+     wordpress:latest
+   ```
+
+3. **コンテナの状態を確認**
+
+   作成したコンテナの状態を確認します。
+
+   ```bash
+   # すべてのコンテナをリスト表示
+   ./podman_manager.sh list
+
+   # 各コンテナの詳細ステータスを確認
+   ./podman_manager.sh status wordpress-mysql
+   ./podman_manager.sh status my-wordpress
+   ```
+
+4. **リソース使用状況を監視**
+
+   リソース使用状況を監視して、コンテナが正常に動作していることを確認します。
+
+   ```bash
+   # 簡易リソース監視
+   ./podman_manager.sh stats
+
+   # 詳細リソース監視（しきい値を低めに設定して警告を確認）
+   ./podman_manager.sh stats-detail 50 60 5
+   ```
+
+5. **ログを確認**
+
+   問題がないかログを確認します。
+
+   ```bash
+   # WordPressコンテナのログを確認
+   ./podman_manager.sh logs my-wordpress
+
+   # リアルタイムでログを監視
+   ./podman_manager.sh logs my-wordpress follow
+   ```
+
+6. **サービスへのアクセス**
+
+   WordPressサイトは http://localhost:8080 でアクセスできます。
+
+7. **コンテナの管理**
+
+   必要に応じてコンテナを停止・再開・削除できます。
+
+   ```bash
+   # コンテナを停止
+   ./podman_manager.sh stop my-wordpress
+   ./podman_manager.sh stop wordpress-mysql
+
+   # コンテナを再開
+   ./podman_manager.sh start wordpress-mysql
+   ./podman_manager.sh start my-wordpress
+
+   # コンテナを削除（注意：データが失われます）
+   ./podman_manager.sh remove my-wordpress
+   ./podman_manager.sh remove wordpress-mysql
+   ```
+
 ## 注意事項
 
 - このスクリプトはPodmanがシステムに正しくインストールされていることを前提としています。
@@ -287,6 +657,61 @@ chmod +x podman_manager.sh
 - **Podmanが見つかりません**: Podmanがシステムに正しくインストールされており、PATHに含まれているか確認してください
 - **リソース統計が表示されない**: コンテナが実行中であるか確認してください
 - **色付けが正しく表示されない**: ターミナルがANSIカラーをサポートしているか確認してください
+
+### 解決策付きトラブルシューティング
+
+以下は一般的な問題とその解決策です：
+
+#### Podmanが動作しない問題
+
+1. **問題**: "Error: Podman is not installed or not in PATH"というエラーが出る
+2. **原因**: Podmanがインストールされていない、またはPATHが通っていない
+3. **解決策**:
+   - Podmanが正しくインストールされているか確認: `podman --version`
+   - インストールされていない場合は、上記の「前提条件のインストール方法」を参照してインストール
+   - Podmanが実行可能か確認: `which podman`
+
+#### 実行権限に関する問題
+
+1. **問題**: "Permission denied"エラー
+2. **原因**: スクリプトに実行権限が設定されていない
+3. **解決策**:
+   ```bash
+   chmod +x podman_manager.sh
+   ```
+
+#### コンテナが起動しない問題
+
+1. **問題**: `./podman_manager.sh start <CONTAINER_ID>` を実行してもコンテナが起動しない
+2. **原因**:
+   - コンテナが破損している
+   - ポート競合が発生している
+   - 必要なリソースが不足している
+3. **解決策**:
+   - コンテナの詳細を確認: `./podman_manager.sh status <CONTAINER_ID>`
+   - コンテナのログを確認: `./podman_manager.sh logs <CONTAINER_ID>`
+   - システムのリソース使用状況を確認: `./podman_manager.sh stats`
+
+#### リソース統計が正しく表示されない問題
+
+1. **問題**: `stats`または`stats-detail`コマンドが正しく動作しない
+2. **原因**:
+   - 実行中にコンテナがない
+   - 必要なツール（bc, sed, jq）がインストールされていない
+3. **解決策**:
+   - コンテナが実行中であることを確認: `./podman_manager.sh ps`
+   - 必要なツールをインストール: `sudo apt install bc sed jq`
+
+#### セキュリティスキャン機能が動作しない問題
+
+1. **問題**: `security-scan`コマンドが失敗する
+2. **原因**:
+   - Trivyがインストールされていない
+   - コンテナが存在しない
+3. **解決策**:
+   - Trivyをインストール: `sudo apt install trivy`（上記インストール方法を参照）
+   - コンテナが存在するか確認: `./podman_manager.sh list`
+   - コンテナ名を正確に入力しているか確認
 
 ### 詳細リソースモニタリング (stats-detail) の問題
 
@@ -312,6 +737,107 @@ chmod +x podman_manager.sh
 
 - **権限エラー**: 一部の操作にはroot権限が必要になる場合があります（rootless Podmanを使用していない場合）
 - **ログファイルが生成されない**: ログの出力先ディレクトリに書き込み権限があるか確認してください
+
+### デバッグ手順
+
+1. **基本情報の確認**:
+   ```bash
+   # Podmanのバージョン確認
+   podman --version
+
+   # スクリプトの実行権限確認
+   ls -la podman_manager.sh
+
+   # 現在のコンテナ状態確認
+   ./podman_manager.sh list
+   ```
+
+2. **問題のあるコンテナの調査**:
+   ```bash
+   # 特定のコンテナの詳細状態
+   ./podman_manager.sh status <CONTAINER_ID>
+
+   # コンテナのログ確認
+   ./podman_manager.sh logs <CONTAINER_ID>
+   ```
+
+3. **詳細な診断**:
+   ```bash
+   # システム全体の状態
+   ./podman_manager.sh stats
+
+   # 実行中のプロセス確認
+   ./podman_manager.sh ps
+   ```
+
+### 問題報告の際の情報
+
+問題を報告する際は、以下の情報を含めてください：
+- 使用しているオペレーティングシステム
+- Podmanのバージョン (`podman --version`)
+- 実行したコマンド
+- 発生したエラーメッセージの全文
+- ログファイル (`/tmp/podman_manager.sh.log`) の関連部分
+
+## よくある質問 (FAQ)
+
+### Q1: Podman Managerと直接Podmanコマンドを使う違いは何ですか？
+
+A: Podman ManagerはPodmanの機能をラップして使いやすくするためのスクリプトです。以下の利点があります：
+- より分かりやすいコマンド構造
+- 便利なショートカット機能（例：詳細なリソース監視、バッチ操作、セキュリティスキャン）
+- 色付きの出力による視認性の向上
+- エラーハンドリングの簡略化
+
+### Q2: コンテナIDではなく名前で操作できますか？
+
+A: はい、ほとんどのコマンドでコンテナIDのかわりにコンテナ名を使用できます。例えば：
+```bash
+./podman_manager.sh stop my-container-name
+./podman_manager.sh logs my-container-name
+./podman_manager.sh status my-container-name
+```
+
+### Q3: ポートフォワーディングを指定してコンテナを作成するにはどうすればいいですか？
+
+A: 現在のバージョンでは、コンテナを作成するには直接Podmanコマンドを使用してください：
+```bash
+podman run -d --name my-container -p 8080:80 nginx
+```
+その後、Podman Managerを使用して管理できます：
+```bash
+./podman_manager.sh status my-container
+./podman_manager.sh logs my-container
+```
+
+### Q4: statsとstats-detailの違いは何ですか？
+
+A:
+- `stats`コマンド: 基本的なリソース使用状況（CPU、メモリ、ネットワークI/O）を一度だけ表示
+- `stats-detail`コマンド: 詳細なリソース情報をリアルタイムに監視し、設定したしきい値を超えた場合に警告を表示
+
+### Q5: セキュリティスキャンで検出された脆弱性の対処方法を教えてください
+
+A: 高または重大度の脆弱性が検出された場合は、以下の対応を検討してください：
+1. イメージの更新: 最新のセキュリティパッチが適用されたイメージに更新
+2. イメージの選択: よりセキュリティに配慮したベースイメージの使用
+3. 最小限の権限: コンテナ内で必要最小限の権限でプロセスを実行
+
+### Q6: ログファイルの場所を変更できますか？
+
+A: 現在のバージョンでは、すべてのログは `/tmp/podman_manager.sh.log` に出力されます。ファイル名の変更は現時点ではサポートしていません。
+
+### Q7: バッチ操作で使える正規表現の例を教えてください
+
+A:
+- `^web.*`: 'web'で始まる名前のコンテナ（例：web-server, web-app）
+- `.*database.*`: 名前に'database'を含むコンテナ（例：mysql-database, postgres-database）
+- `.*-[0-9]+$`: 数字で終わる名前のコンテナ（例：app-01, app-02）
+- `^prod-.*`: 'prod-'で始まる運用環境のコンテナ
+
+### Q8: ルートユーザー以外でも使用できますか？
+
+A: はい、Podmanはrootless（非root）モードに対応しているので、通常のユーザー権限でも使用できます。ただし、一部のネットワーク設定や特定のシステムレベルの操作には特別な設定が必要になる場合があります。
 
 ## エラー処理
 
