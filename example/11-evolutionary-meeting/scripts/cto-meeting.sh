@@ -69,34 +69,30 @@ ${AGENDA}
 ## 重要: 成果物を生成してください
 
 会議の議論だけでなく、**実際の成果物**を生成してください。
-成果物は \`/workspace/deliverables/\` ディレクトリに出力してください。
+
+### 成果物の出力形式（必ずこの形式で出力）
+
+各成果物を以下の形式で出力してください：
+
+~~~file:deliverables/ファイル名.拡張子
+（ここにファイルの内容を書く）
+~~~
+
+### 例
+~~~file:deliverables/sample-guide.md
+# サンプルガイド
+これはサンプルです。
+~~~
 
 ### 成果物の例
-- ドキュメント: README.md, GUIDE.md など
-- コード: スクリプト、設定ファイル
-- 設計書: 設計ドキュメント、図解
-- 調査レポート: 調査結果のまとめ
+- ドキュメント: guide.md, README.md, report.md
+- コード: script.sh, config.yaml
+- 設計書: design.md
 
-### 出力形式
+### 出力順序
+1. まず議事録を出力
+2. 次に成果物ファイルを出力（必ず file:deliverables/xxx 形式）
 
-議事録:
-\`\`\`markdown
-### 🎯 スプリントゴール
-### 📋 スプリントバックログ
-### ✅ 完了したタスク
-### 📦 成果物リスト
-- /workspace/deliverables/xxx.md
-- /workspace/deliverables/xxx.sh
-### 🔍 レトロスペクティブ
-### 🚫 ブロッカー
-\`\`\`
-
-成果物ファイル:
-\`\`\`file:/workspace/deliverables/xxx.md
-（ファイル内容）
-\`\`\`
-
-まず議事録を出力し、その後に成果物ファイルを出力してください。
 日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
 
 # 議事録保存
@@ -116,30 +112,55 @@ EOF
 
 log "✅ CTO会議終了: ${REPORT_FILE}"
 
-# 成果物ファイルを抽出して保存
-extract_files=$(echo "$OUTPUT" | grep -oE '\`\`\`file:/workspace/deliverables/[^`]+\`\`\`' | sort -u)
-for file_match in $extract_files; do
-    filepath=$(echo "$file_match" | sed 's/\`\`\`file://;s/\`\`\`//')
-    filename=$(basename "$filepath")
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:${filepath}/,/\`\`\`/p" | sed '1d;$d')
+# 成果物ファイルを抽出して保存（複数パターン対応）
+log "📦 成果物を抽出中..."
+
+# パターン1: ```file:deliverables/xxx```
+echo "$OUTPUT" | grep -oP '(?<=```file:deliverables/)[^`]+' | while read filename; do
+    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:deliverables\/${filename}/,/\`\`\`/p" | sed '1d;$d')
     if [ -n "$content" ]; then
         echo "$content" > "${DELIVERABLES_DIR}/${filename}"
         log "📦 成果物保存: ${filename}"
     fi
 done
 
+# パターン2: ```file:/workspace/deliverables/xxx```
+echo "$OUTPUT" | grep -oP '(?<=```file:/workspace/deliverables/)[^`]+' | while read filename; do
+    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:\/workspace\/deliverables\/${filename}/,/\`\`\`/p" | sed '1d;$d')
+    if [ -n "$content" ]; then
+        echo "$content" > "${DELIVERABLES_DIR}/${filename}"
+        log "📦 成果物保存: ${filename}"
+    fi
+done
+
+# 成果物数確認
+DELIVERABLES_COUNT=$(ls -1 "${DELIVERABLES_DIR}" 2>/dev/null | grep -v ".gitkeep" | wc -l)
+log "📦 成果物数: ${DELIVERABLES_COUNT}"
+
 # 成果物をリポジトリにプッシュ
-if [ -d "${WORKSPACE}/.git" ] && [ -n "$GH_TOKEN" ]; then
+if [ -d "${WORKSPACE}/.git" ]; then
     log "📤 成果物をプッシュ中..."
     cd "${WORKSPACE}"
+
+    # 認証設定
+    if [ -n "$GH_TOKEN" ]; then
+        git remote set-url origin "https://${GH_TOKEN}@github.com/onizuka-agi-co/onipod.git"
+    fi
+
     git config user.email "onizuka.renjiii@gmail.com"
     git config user.name "onizukarenjiii-droid"
     git add company/ meetings/ deliverables/ 2>/dev/null || true
-    git commit -m "📄 CTO会議 ${DATE} ${TIME}: ${AGENDA}
+
+    if [ -n "$(git status --porcelain)" ]; then
+        git commit -m "📄 CTO会議 ${DATE} ${TIME}: ${AGENDA}
 
 - 議事録: meetings/cto/${TIMESTAMP}.md
-- 成果物: deliverables/
+- 成果物: deliverables/ (${DELIVERABLES_COUNT}件)
 
 Co-Authored-By: Evolutionary Meeting Bot <noreply@evolution.bot>" || true
-    git push origin main || log "⚠️ プッシュスキップ"
+        git push origin main || log "⚠️ プッシュスキップ"
+        log "✅ プッシュ完了"
+    else
+        log "📝 コミットする変更なし"
+    fi
 fi

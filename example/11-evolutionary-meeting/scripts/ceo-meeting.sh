@@ -27,7 +27,19 @@ RECENT_CTO=$(ls -t "${CTO_DIR}"/*.md 2>/dev/null | head -3 || echo "")
 
 if [ -z "$RECENT_CTO" ]; then
     log "📭 CTO会議履歴なし"
-    echo "CTO会議待機中" > "$REPORT_FILE"
+    cat > "$REPORT_FILE" <<EOF
+# 👔 CEO会議 ${DATE} ${TIME}
+
+**決定事項**: CTO会議待機中
+
+---
+
+CTO会議がまだ実施されていません。
+
+---
+
+*CEO Meeting - Evolutionary Meeting Bot*
+EOF
     log "✅ CEO会議終了"
     exit 0
 fi
@@ -45,16 +57,16 @@ CEO_RULES=$(cat "${COMPANY_DIR}/ceo-rules.md" 2>/dev/null || echo "")
 CTO_RULES=$(cat "${COMPANY_DIR}/cto-rules.md" 2>/dev/null || echo "")
 FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "")
 
-# 直近の成果物も読み込む
-DELIVERABLES_INFO=""
-if [ -d "${DELIVERABLES_DIR}" ]; then
-    DELIVERABLES_INFO="## 直近の成果物\n$(ls -la "${DELIVERABLES_DIR}" | tail -10)"
-fi
-
 log "📊 CTO会議を分析中..."
 
+# 成果物情報を取得
+DELIVERABLES_INFO=""
+if [ -d "${DELIVERABLES_DIR}" ]; then
+    DELIVERABLES_INFO="## 直近の成果物\n$(ls -la "${DELIVERABLES_DIR}" 2>/dev/null | tail -10 || echo 'なし')"
+fi
+
 # Claude に分析と修正を依頼
-OUTPUT=$(claude -p "あなたはCEOです。CTO会議を評価し、必要なファイルを修正してください。
+OUTPUT=$(claude -p "あなたはCEO（最高経営責任者）です。CTO会議を評価し、会社情報を更新してください。
 
 ## 会社情報
 ミッション: ${MISSION}
@@ -65,7 +77,7 @@ CTOルール: ${CTO_RULES}
 
 ${DELIVERABLES_INFO}
 
-## CTO会議議事録
+## CTO会議議事録（直近3件）
 ${CTO_CONTENT}
 
 ---
@@ -73,63 +85,33 @@ ${CTO_CONTENT}
 ## タスク
 
 ### 1. CTO会議を評価
-- スプリントゴール達成率
-- 成果物の品質
+- スプリントゴール達成率（%）
+- 成果物の品質評価
 - レトロスペクティブの質
 
-### 2. 会社情報ファイルを修正（必要な場合）
+### 2. 会社情報ファイルを更新（必要な場合のみ）
 
-\`\`\`file:cto-rules.md
-（更新内容）
+更新が必要な場合のみ、以下の形式で出力：
+
+\`\`\`file:company/cto-rules.md
+（更新後の内容全体）
 \`\`\`
 
-\`\`\`file:focus.md
-（更新内容）
+\`\`\`file:company/focus.md
+（更新後の内容全体）
 \`\`\`
 
-\`\`\`file:strategy.md
-（更新内容）
+\`\`\`file:company/strategy.md
+（更新後の内容全体）
 \`\`\`
 
-\`\`\`file:history.md
-（追記内容のみ）
+\`\`\`file:company/history.md
+（追記する内容のみ）
 \`\`\`
 
-### 3. 戦略ドキュメントを生成（必要な場合）
-
-\`\`\`file:/workspace/deliverables/strategy-update.md
-（戦略更新ドキュメント）
-\`\`\`
+### 3. 評価レポートを生成
 
 日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 分析エラー"
-
-# ファイル更新を適用
-for file in cto-rules.md ceo-rules.md focus.md strategy.md; do
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:${file}/,/\`\`\`/p" | sed '1d;$d')
-    if [ -n "$content" ]; then
-        echo "$content" > "${COMPANY_DIR}/${file}"
-        log "📝 ${file} を更新"
-    fi
-done
-
-# history.md は追記
-HISTORY_ADD=$(echo "$OUTPUT" | sed -n '/```file:history.md/,/```/p' | sed '1d;$d')
-if [ -n "$HISTORY_ADD" ]; then
-    echo -e "\n### ${DATE} ${TIME}\n${HISTORY_ADD}" >> "${COMPANY_DIR}/history.md"
-    log "📝 history.md に追記"
-fi
-
-# 成果物ファイルを抽出して保存
-extract_files=$(echo "$OUTPUT" | grep -oE '\`\`\`file:/workspace/deliverables/[^`]+\`\`\`' | sort -u)
-for file_match in $extract_files; do
-    filepath=$(echo "$file_match" | sed 's/\`\`\`file://;s/\`\`\`//')
-    filename=$(basename "$filepath")
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:${filepath}/,/\`\`\`/p" | sed '1d;$d')
-    if [ -n "$content" ]; then
-        echo "$content" > "${DELIVERABLES_DIR}/${filename}"
-        log "📦 成果物保存: ${filename}"
-    fi
-done
 
 # 議事録保存
 cat > "$REPORT_FILE" <<EOF
@@ -144,18 +126,46 @@ EOF
 
 log "✅ CEO会議終了"
 
+# ファイル更新を適用
+for file in cto-rules.md ceo-rules.md focus.md strategy.md; do
+    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:company\/${file}/,/\`\`\`/p" | sed '1d;$d')
+    if [ -n "$content" ]; then
+        echo "$content" > "${COMPANY_DIR}/${file}"
+        log "📝 ${file} を更新"
+    fi
+done
+
+# history.md は追記
+HISTORY_ADD=$(echo "$OUTPUT" | sed -n '/```file:company\/history.md/,/```/p' | sed '1d;$d')
+if [ -n "$HISTORY_ADD" ]; then
+    echo -e "\n### ${DATE} ${TIME}\n${HISTORY_ADD}" >> "${COMPANY_DIR}/history.md"
+    log "📝 history.md に追記"
+fi
+
 # 成果物をリポジトリにプッシュ
-if [ -d "${WORKSPACE}/.git" ] && [ -n "$GH_TOKEN" ]; then
+if [ -d "${WORKSPACE}/.git" ]; then
     log "📤 成果物をプッシュ中..."
     cd "${WORKSPACE}"
+
+    # 認証設定
+    if [ -n "$GH_TOKEN" ]; then
+        git remote set-url origin "https://${GH_TOKEN}@github.com/onizuka-agi-co/onipod.git"
+    fi
+
     git config user.email "onizuka.renjiii@gmail.com"
     git config user.name "onizukarenjiii-droid"
     git add company/ meetings/ deliverables/ 2>/dev/null || true
-    git commit -m "👔 CEO会議 ${DATE} ${TIME}: ルール・フォーカス更新
+
+    if [ -n "$(git status --porcelain)" ]; then
+        git commit -m "👔 CEO会議 ${DATE} ${TIME}: ルール・フォーカス更新
 
 - 議事録: meetings/ceo/${TIMESTAMP}.md
 - 会社情報更新: company/
 
 Co-Authored-By: Evolutionary Meeting Bot <noreply@evolution.bot>" || true
-    git push origin main || log "⚠️ プッシュスキップ"
+        git push origin main || log "⚠️ プッシュスキップ"
+        log "✅ プッシュ完了"
+    else
+        log "📝 コミットする変更なし"
+    fi
 fi
