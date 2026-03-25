@@ -1,5 +1,6 @@
 #!/bin/bash
 # CTO会議 - アジャイル方式の技術実務会議
+# Claude CLIに成果物生成を委ね
 
 set -e
 
@@ -28,7 +29,7 @@ FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "フォーカス未設
 
 log "📋 カンパニー情報を読み込み"
 
-# アジェンダ（時間ベースローテーショョHOUR=$(date +"%H")
+# アジェンダ（時間ベースローテーションHOUR=$(date +"%H")
 AGENDAS=(
     "コードレビュー: コードの品質確認と改善"
     "技術調査: 新機能やベストプラクティス調査"
@@ -40,16 +41,14 @@ AGENDAS=(
     "パフォーマンス: ビルドや実行の効率化"
 )
 
-HOUR_MOD=$((HOUR % 8))
 AGENDA="${AGENDAS[$((HOUR % ${#AGENDAS[@]}))]}"
 
 log "🎯 スプリントテーマ: $AGENDA"
 
-# Claude CLI に会議と成果物生成を依頼
-# --allowedTools で Write を許可してファイルを生成させる
+# Claude CLI に会議と成果物生成を依頼（JSON出力で結果取得）
 log "🤖 Claude CLI に会議依頼中..."
 
-PROMPT="あなたはCTO（最高技術責任任者）です。アジャイル方式でスプリントを実行してください。
+OUTPUT=$(echo "あなたはCTO（最高技術責任任者）です。アジャイル方式でスプリントを実行してください。
 
 ## 会社のミッション
 ${MISSION}
@@ -57,7 +56,7 @@ ${MISSION}
 ## 戦略
 ${STRATEGY}
 
-## CTO会議ルール
+## CTO会議ルール (アジャイル)
 ${CTO_RULES}
 
 ## 現在のフォーカス
@@ -74,22 +73,9 @@ ${AGENDA}
 2. アクションアイテムをリストアップ
 3. **成果物を生成する**
 
-成果物は以下のディレクトリに出力してください：
-- /workspace/deliverables/
+成果物は deliverables/ ディレクトリに出力してください。
 
-Write ツールを使ってファイルを書き込んでください。
-
----
-
-## 出力形式
-
-1. 会議議事録（マークダウン）
-2. 成果物ファイル（Writeツールで生成）
-
-日本語で出力してください。"
-
-# Claude CLI を実行（Write ツールを許可)
-OUTPUT=$(claude -p --allowedTools "Write" "$PROMPT" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
+日本語で出力してください。" | claude --print --allowedTools "Write" --add-dir "/workspace/deliverables" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
 
 # 議事録保存
 cat > "$REPORT_FILE" <<EOF
@@ -107,6 +93,10 @@ ${OUTPUT}
 EOF
 
 log "✅ CTO会議終了: ${REPORT_FILE}"
+
+# 成果物数確認
+DELIVERABLES_COUNT=$(ls -1 "${DELIVERABLES_DIR}" 2>/dev/null | grep -v ".gitkeep" | wc -l)
+log "📦 成果物数: ${DELIVERABLES_COUNT}"
 
 # 成果物をリポジトリにプッシュ
 if [ -d "${WORKSPACE}/.git" ]; then
@@ -126,7 +116,7 @@ if [ -d "${WORKSPACE}/.git" ]; then
         git commit -m "📄 CTO会議 ${DATE} ${TIME}: ${AGENDA}
 
 - 議事録: meetings/cto/${TIMESTAMP}.md
-- 成果物: deliverables/
+- 成果物: deliverables/ (${DELIVERABLES_COUNT}件)
 
 Co-Authored-By: Evolutionary Meeting Bot <noreply@evolution.bot>" || true
         git push origin main || log "⚠️ プッシュスキップ"
