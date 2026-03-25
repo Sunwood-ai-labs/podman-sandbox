@@ -46,54 +46,100 @@ AGENDA="${AGENDAS[$((HOUR % ${#AGENDAS[@]}))]}"
 
 log "🎯 スプリントテーマ: $AGENDA"
 
-# Claude に会議と成果物生成を依頼
-OUTPUT=$(claude -p "あなたはCTO（最高技術責任者）です。アジャイル方式でスプリントを実行してください。
+# プロンプトをファイルに保存して実行
+PROMPT_FILE="/tmp/cto_prompt_${TIMESTAMP}.txt"
+cat > "$PROMPT_FILE" << 'PROMPT_EOF'
+あなたはCTO（最高技術責任者）です。アジャイル方式でスプリントを実行してください。
 
 ## 会社のミッション
-${MISSION}
+PROMPT_EOF
+
+echo "${MISSION}" >> "$PROMPT_FILE"
+
+cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
 
 ## 戦略
-${STRATEGY}
+PROMPT_EOF
+
+echo "${STRATEGY}" >> "$PROMPT_FILE"
+
+cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
 
 ## CTO会議ルール (アジャイル)
-${CTO_RULES}
+PROMPT_EOF
+
+echo "${CTO_RULES}" >> "$PROMPT_FILE"
+
+cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
 
 ## 現在のフォーカス
-${FOCUS}
+PROMPT_EOF
+
+echo "${FOCUS}" >> "$PROMPT_FILE"
+
+cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
 
 ---
 
 ## 今回のスプリントテーマ
-${AGENDA}
+PROMPT_EOF
 
-## 重要: 成果物を生成してください
+echo "${AGENDA}" >> "$PROMPT_FILE"
 
-会議の議論だけでなく、**実際の成果物**を生成してください。
+cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
 
-### 成果物の出力形式（必ずこの形式で出力）
+---
 
-各成果物を以下の形式で出力してください：
+## 🚨 最重要: 成果物ファイルを必ず生成してください
 
-~~~file:deliverables/ファイル名.拡張子
-（ここにファイルの内容を書く）
-~~~
+会議の議論だけでなく、**実際の成果物ファイルの中身**を生成してください。
+以下の形式を厳守してください：
+
+### 成果物ファイル出力形式（必須）
+
+各ファイルを以下の形式で出力：
+
+===FILE_START:deliverables/ファイル名===
+（ここにファイルの中身を書く）
+===FILE_END===
 
 ### 例
-~~~file:deliverables/sample-guide.md
-# サンプルガイド
+
+===FILE_START:deliverables/README.md===
+# サンプルREADME
+
 これはサンプルです。
-~~~
+===FILE_END===
 
-### 成果物の例
-- ドキュメント: guide.md, README.md, report.md
-- コード: script.sh, config.yaml
-- 設計書: design.md
+===FILE_START:deliverables/guide.sh===
+#!/bin/bash
+echo "Hello"
+===FILE_END===
 
-### 出力順序
-1. まず議事録を出力
-2. 次に成果物ファイルを出力（必ず file:deliverables/xxx 形式）
+### 成果物の種類（テーマに合わせて選択）
+- ドキュメント: guide.md, README.md, design.md
+- スクリプト: script.sh, setup.sh
+- 設定ファイル: config.yaml, settings.json
 
-日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
+## 出力構成
+
+1. スプリントゴール
+2. バックログ
+3. 完了タスク
+4. 成果物ファイル（===FILE_START:deliverables/xxx=== 形式で必ず出力）
+5. レトロスペクティブ
+6. ブロッカー
+
+**必ず1つ以上の成果物ファイルを出力してください！**
+
+日本語で出力してください。
+PROMPT_EOF
+
+# Claude に会議と成果物生成を依頼
+OUTPUT=$(claude -p "$(cat "$PROMPT_FILE")" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
+
+# 一時ファイル削除
+rm -f "$PROMPT_FILE"
 
 # 議事録保存
 cat > "$REPORT_FILE" <<EOF
@@ -112,26 +158,35 @@ EOF
 
 log "✅ CTO会議終了: ${REPORT_FILE}"
 
-# 成果物ファイルを抽出して保存（複数パターン対応）
+# 成果物ファイルを抽出して保存（BusyBox対応）
 log "📦 成果物を抽出中..."
 
-# パターン1: ```file:deliverables/xxx```
-echo "$OUTPUT" | grep -oP '(?<=```file:deliverables/)[^`]+' | while read filename; do
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:deliverables\/${filename}/,/\`\`\`/p" | sed '1d;$d')
-    if [ -n "$content" ]; then
-        echo "$content" > "${DELIVERABLES_DIR}/${filename}"
-        log "📦 成果物保存: ${filename}"
-    fi
-done
+current_file=""
+current_content=""
+in_file=0
 
-# パターン2: ```file:/workspace/deliverables/xxx```
-echo "$OUTPUT" | grep -oP '(?<=```file:/workspace/deliverables/)[^`]+' | while read filename; do
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:\/workspace\/deliverables\/${filename}/,/\`\`\`/p" | sed '1d;$d')
-    if [ -n "$content" ]; then
-        echo "$content" > "${DELIVERABLES_DIR}/${filename}"
-        log "📦 成果物保存: ${filename}"
+while IFS= read -r line; do
+    if echo "$line" | grep -q "^===FILE_START:deliverables/"; then
+        current_file=$(echo "$line" | sed 's/^===FILE_START://')
+        in_file=1
+        current_content=""
+    elif echo "$line" | grep -q "^===FILE_END==="; then
+        if [ -n "$current_file" ] && [ -n "$current_content" ]; then
+            echo "$current_content" > "${WORKSPACE}/${current_file}"
+            log "📦 成果物保存: ${current_file}"
+        fi
+        in_file=0
+        current_file=""
+        current_content=""
+    elif [ "$in_file" -eq 1 ]; then
+        if [ -n "$current_content" ]; then
+            current_content="${current_content}
+${line}"
+        else
+            current_content="${line}"
+        fi
     fi
-done
+done <<< "$OUTPUT"
 
 # 成果物数確認
 DELIVERABLES_COUNT=$(ls -1 "${DELIVERABLES_DIR}" 2>/dev/null | grep -v ".gitkeep" | wc -l)

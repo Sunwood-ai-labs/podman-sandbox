@@ -59,12 +59,6 @@ FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "")
 
 log "📊 CTO会議を分析中..."
 
-# 成果物情報を取得
-DELIVERABLES_INFO=""
-if [ -d "${DELIVERABLES_DIR}" ]; then
-    DELIVERABLES_INFO="## 直近の成果物\n$(ls -la "${DELIVERABLES_DIR}" 2>/dev/null | tail -10 || echo 'なし')"
-fi
-
 # Claude に分析と修正を依頼
 OUTPUT=$(claude -p "あなたはCEO（最高経営責任者）です。CTO会議を評価し、会社情報を更新してください。
 
@@ -74,8 +68,6 @@ OUTPUT=$(claude -p "あなたはCEO（最高経営責任者）です。CTO会議
 CEOルール: ${CEO_RULES}
 CTOルール: ${CTO_RULES}
 フォーカス: ${FOCUS}
-
-${DELIVERABLES_INFO}
 
 ## CTO会議議事録（直近3件）
 ${CTO_CONTENT}
@@ -93,23 +85,29 @@ ${CTO_CONTENT}
 
 更新が必要な場合のみ、以下の形式で出力：
 
-\`\`\`file:company/cto-rules.md
+\`\`\`
+===FILE_START:company/cto-rules.md===
 （更新後の内容全体）
+===FILE_END===
 \`\`\`
 
-\`\`\`file:company/focus.md
+\`\`\`
+===FILE_START:company/focus.md===
 （更新後の内容全体）
+===FILE_END===
 \`\`\`
 
-\`\`\`file:company/strategy.md
+\`\`\`
+===FILE_START:company/strategy.md===
 （更新後の内容全体）
+===FILE_END===
 \`\`\`
 
-\`\`\`file:company/history.md
+\`\`\`
+===FILE_START:company/history.md===
 （追記する内容のみ）
+===FILE_END===
 \`\`\`
-
-### 3. 評価レポートを生成
 
 日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 分析エラー"
 
@@ -126,21 +124,40 @@ EOF
 
 log "✅ CEO会議終了"
 
-# ファイル更新を適用
-for file in cto-rules.md ceo-rules.md focus.md strategy.md; do
-    content=$(echo "$OUTPUT" | sed -n "/\`\`\`file:company\/${file}/,/\`\`\`/p" | sed '1d;$d')
-    if [ -n "$content" ]; then
-        echo "$content" > "${COMPANY_DIR}/${file}"
-        log "📝 ${file} を更新"
-    fi
-done
+# ファイル更新を適用（BusyBox対応）
+current_file=""
+current_content=""
+in_file=0
 
-# history.md は追記
-HISTORY_ADD=$(echo "$OUTPUT" | sed -n '/```file:company\/history.md/,/```/p' | sed '1d;$d')
-if [ -n "$HISTORY_ADD" ]; then
-    echo -e "\n### ${DATE} ${TIME}\n${HISTORY_ADD}" >> "${COMPANY_DIR}/history.md"
-    log "📝 history.md に追記"
-fi
+while IFS= read -r line; do
+    if echo "$line" | grep -q "^===FILE_START:company/"; then
+        current_file=$(echo "$line" | sed 's/^===FILE_START://' | sed 's|company/||')
+        in_file=1
+        current_content=""
+    elif echo "$line" | grep -q "^===FILE_END==="; then
+        if [ -n "$current_file" ] && [ -n "$current_content" ]; then
+            if [ "$current_file" = "history.md" ]; then
+                # history.md は追記
+                echo -e "\n### ${DATE} ${TIME}\n${current_content}" >> "${COMPANY_DIR}/${current_file}"
+                log "📝 ${current_file} に追記"
+            else
+                # その他は上書き
+                echo "$current_content" > "${COMPANY_DIR}/${current_file}"
+                log "📝 ${current_file} を更新"
+            fi
+        fi
+        in_file=0
+        current_file=""
+        current_content=""
+    elif [ "$in_file" -eq 1 ]; then
+        if [ -n "$current_content" ]; then
+            current_content="${current_content}
+${line}"
+        else
+            current_content="${line}"
+        fi
+    fi
+done <<< "$OUTPUT"
 
 # 成果物をリポジトリにプッシュ
 if [ -d "${WORKSPACE}/.git" ]; then
