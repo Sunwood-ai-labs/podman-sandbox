@@ -1,6 +1,5 @@
 #!/bin/bash
 # CTO会議 - アジャイル方式の技術実務会議
-# 実際の成果物を生成してコミット
 
 set -e
 
@@ -29,7 +28,7 @@ FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "フォーカス未設
 
 log "📋 カンパニー情報を読み込み"
 
-# アジェンダ
+# アジェンダ（時間ベースローテーショョHOUR=$(date +"%H")
 AGENDAS=(
     "コードレビュー: コードの品質確認と改善"
     "技術調査: 新機能やベストプラクティス調査"
@@ -41,105 +40,56 @@ AGENDAS=(
     "パフォーマンス: ビルドや実行の効率化"
 )
 
-HOUR=$(date +"%H")
+HOUR_MOD=$((HOUR % 8))
 AGENDA="${AGENDAS[$((HOUR % ${#AGENDAS[@]}))]}"
 
 log "🎯 スプリントテーマ: $AGENDA"
 
-# プロンプトをファイルに保存して実行
-PROMPT_FILE="/tmp/cto_prompt_${TIMESTAMP}.txt"
-cat > "$PROMPT_FILE" << 'PROMPT_EOF'
-あなたはCTO（最高技術責任者）です。アジャイル方式でスプリントを実行してください。
+# Claude CLI に会議と成果物生成を依頼
+# --allowedTools で Write を許可してファイルを生成させる
+log "🤖 Claude CLI に会議依頼中..."
+
+PROMPT="あなたはCTO（最高技術責任任者）です。アジャイル方式でスプリントを実行してください。
 
 ## 会社のミッション
-PROMPT_EOF
-
-echo "${MISSION}" >> "$PROMPT_FILE"
-
-cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
+${MISSION}
 
 ## 戦略
-PROMPT_EOF
+${STRATEGY}
 
-echo "${STRATEGY}" >> "$PROMPT_FILE"
-
-cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
-
-## CTO会議ルール (アジャイル)
-PROMPT_EOF
-
-echo "${CTO_RULES}" >> "$PROMPT_FILE"
-
-cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
+## CTO会議ルール
+${CTO_RULES}
 
 ## 現在のフォーカス
-PROMPT_EOF
-
-echo "${FOCUS}" >> "$PROMPT_FILE"
-
-cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
+${FOCUS}
 
 ---
 
 ## 今回のスプリントテーマ
-PROMPT_EOF
+${AGENDA}
 
-echo "${AGENDA}" >> "$PROMPT_FILE"
+## タスク
 
-cat >> "$PROMPT_FILE" << 'PROMPT_EOF'
+1. スプリントゴールを設定
+2. アクションアイテムをリストアップ
+3. **成果物を生成する**
+
+成果物は以下のディレクトリに出力してください：
+- /workspace/deliverables/
+
+Write ツールを使ってファイルを書き込んでください。
 
 ---
 
-## 🚨 最重要: 成果物ファイルを必ず生成してください
+## 出力形式
 
-会議の議論だけでなく、**実際の成果物ファイルの中身**を生成してください。
-以下の形式を厳守してください：
+1. 会議議事録（マークダウン）
+2. 成果物ファイル（Writeツールで生成）
 
-### 成果物ファイル出力形式（必須）
+日本語で出力してください。"
 
-各ファイルを以下の形式で出力：
-
-===FILE_START:deliverables/ファイル名===
-（ここにファイルの中身を書く）
-===FILE_END===
-
-### 例
-
-===FILE_START:deliverables/README.md===
-# サンプルREADME
-
-これはサンプルです。
-===FILE_END===
-
-===FILE_START:deliverables/guide.sh===
-#!/bin/bash
-echo "Hello"
-===FILE_END===
-
-### 成果物の種類（テーマに合わせて選択）
-- ドキュメント: guide.md, README.md, design.md
-- スクリプト: script.sh, setup.sh
-- 設定ファイル: config.yaml, settings.json
-
-## 出力構成
-
-1. スプリントゴール
-2. バックログ
-3. 完了タスク
-4. 成果物ファイル（===FILE_START:deliverables/xxx=== 形式で必ず出力）
-5. レトロスペクティブ
-6. ブロッカー
-
-**必ず1つ以上の成果物ファイルを出力してください！**
-
-日本語で出力してください。
-PROMPT_EOF
-
-# Claude に会議と成果物生成を依頼
-OUTPUT=$(claude -p "$(cat "$PROMPT_FILE")" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
-
-# 一時ファイル削除
-rm -f "$PROMPT_FILE"
+# Claude CLI を実行（Write ツールを許可)
+OUTPUT=$(claude -p --allowedTools "Write" "$PROMPT" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
 
 # 議事録保存
 cat > "$REPORT_FILE" <<EOF
@@ -157,41 +107,6 @@ ${OUTPUT}
 EOF
 
 log "✅ CTO会議終了: ${REPORT_FILE}"
-
-# 成果物ファイルを抽出して保存（BusyBox対応）
-log "📦 成果物を抽出中..."
-
-current_file=""
-current_content=""
-in_file=0
-
-while IFS= read -r line; do
-    if echo "$line" | grep -q "^===FILE_START:deliverables/"; then
-        # deliverables/xxx を抽出
-        current_file="deliverables/$(echo "$line" | sed 's/^===FILE_START:deliverables\///;s/===$//')"
-        in_file=1
-        current_content=""
-    elif echo "$line" | grep -q "^===FILE_END==="; then
-        if [ -n "$current_file" ] && [ -n "$current_content" ]; then
-            echo "$current_content" > "${WORKSPACE}/${current_file}"
-            log "📦 成果物保存: ${current_file}"
-        fi
-        in_file=0
-        current_file=""
-        current_content=""
-    elif [ "$in_file" -eq 1 ]; then
-        if [ -n "$current_content" ]; then
-            current_content="${current_content}
-${line}"
-        else
-            current_content="${line}"
-        fi
-    fi
-done <<< "$OUTPUT"
-
-# 成果物数確認
-DELIVERABLES_COUNT=$(ls -1 "${DELIVERABLES_DIR}" 2>/dev/null | grep -v ".gitkeep" | wc -l)
-log "📦 成果物数: ${DELIVERABLES_COUNT}"
 
 # 成果物をリポジトリにプッシュ
 if [ -d "${WORKSPACE}/.git" ]; then
@@ -211,7 +126,7 @@ if [ -d "${WORKSPACE}/.git" ]; then
         git commit -m "📄 CTO会議 ${DATE} ${TIME}: ${AGENDA}
 
 - 議事録: meetings/cto/${TIMESTAMP}.md
-- 成果物: deliverables/ (${DELIVERABLES_COUNT}件)
+- 成果物: deliverables/
 
 Co-Authored-By: Evolutionary Meeting Bot <noreply@evolution.bot>" || true
         git push origin main || log "⚠️ プッシュスキップ"
