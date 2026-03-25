@@ -29,7 +29,8 @@ FOCUS=$(cat "${COMPANY_DIR}/focus.md" 2>/dev/null || echo "フォーカス未設
 
 log "📋 カンパニー情報を読み込み"
 
-# アジェンダ（時間ベースローテーションHOUR=$(date +"%H")
+# アジェンダ（時間ベースローテーション）
+HOUR=$(date +"%H")
 AGENDAS=(
     "コードレビュー: コードの品質確認と改善"
     "技術調査: 新機能やベストプラクティス調査"
@@ -45,10 +46,10 @@ AGENDA="${AGENDAS[$((HOUR % ${#AGENDAS[@]}))]}"
 
 log "🎯 スプリントテーマ: $AGENDA"
 
-# Claude CLI に会議と成果物生成を依頼（JSON出力で結果取得）
+# Claude CLI に会議と成果物生成を依頼（デンジャラスモード）
 log "🤖 Claude CLI に会議依頼中..."
 
-OUTPUT=$(echo "あなたはCTO（最高技術責任任者）です。アジャイル方式でスプリントを実行してください。
+OUTPUT=$(claude -p --dangerously-skip-permissions "あなたはCTO（最高技術責任任者）です。アジャイル方式でスプリントを実行してください。
 
 ## 会社のミッション
 ${MISSION}
@@ -75,7 +76,7 @@ ${AGENDA}
 
 成果物は deliverables/ ディレクトリに出力してください。
 
-日本語で出力してください。" | claude --print --allowedTools "Write" --add-dir "/workspace/deliverables" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
+日本語で出力してください。" 2>&1) || OUTPUT="⚠️ 会議実行エラー"
 
 # 議事録保存
 cat > "$REPORT_FILE" <<EOF
