@@ -2,7 +2,7 @@
 
 1. company/ を読んで状況把握
 2. やることを決める
-3. 実装（ファイル作成・編集）
+3. 実装（**成果物は deliverables/ に作成**）
 4. 振り返り（必要なら company/ を更新）
 5. company/history.md に成果追記
 
