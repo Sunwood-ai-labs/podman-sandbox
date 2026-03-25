@@ -1,13 +1,6 @@
-# Evolutionary Meeting Bot - CTO/CEO 交互会議
-# 30分ごとに CTO会議 ⇄ CEO会議 を交互に実行
+# Evolutionary Meeting Bot - CEO単独会議
+# 毎時00分に実装 + 振り返りを1セットで実行
 #
 # 分 時 日 月 曜日 コマンド
 
-# 毎時0分: CTO会議（技術・実務）
-0 * * * * /app/scripts/cto-meeting.sh >> /logs/cron.log 2>&1
-
-# 毎時30分: CEO会議（戦略・改善）
-30 * * * * /app/scripts/ceo-meeting.sh >> /logs/cron.log 2>&1
-
-# デバッグ用: 5分おきに交互
-# */10 * * * * [ $(($(date +%M) / 10 % 2)) -eq 0 ] && /app/scripts/cto-meeting.sh || /app/scripts/ceo-meeting.sh >> /logs/cron.log 2>&1
+0 * * * * /app/scripts/meeting.sh >> /logs/cron.log 2>&1

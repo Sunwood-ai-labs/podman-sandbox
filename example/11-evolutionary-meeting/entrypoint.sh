@@ -20,14 +20,12 @@ fi
 # 初期ファイルがなければコピー
 if [ ! -f /workspace/company/mission.md ]; then
     echo "📁 初期companyファイルを展開..."
-    mkdir -p /workspace/company /workspace/meetings/cto /workspace/meetings/ceo
+    mkdir -p /workspace/company /workspace/meetings /workspace/deliverables
     cp -r /app/workspace/company/* /workspace/company/
 fi
 
 echo ""
-echo "📅 Schedule:"
-echo "   CTO会議: 毎時00分"
-echo "   CEO会議: 毎時30分"
+echo "📅 Schedule: 毎時00分"
 echo ""
 
 # crond をバックグラウンドで起動

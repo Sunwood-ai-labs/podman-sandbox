@@ -1,4 +1,4 @@
-# Evolutionary Meeting Bot - CTO/CEO 交替会議で自己進化
+# Evolutionary Meeting Bot - CTO/CEO交替会議で自己進化
 # cron + Claude CLI で30分おきに会議を開く
 
 FROM node:20-alpine
@@ -12,7 +12,9 @@ RUN apk add --no-cache \
 RUN npm install -g @anthropic-ai/claude-code
 
 # 一般ユーザーを作成（デンジャラスモード用）
-RUN adduser -D -u 1000 claude
+# nodeユーザー(uid 1000)が存在する場合はuidを変更
+RUN adduser -D -u 1001 claude 2>/dev/null || \
+    (deluser node 2>/dev/null; adduser -D -u 1000 claude)
 
 # タイムゾーン設定
 ENV TZ=Asia/Tokyo
@@ -37,7 +39,7 @@ RUN chown claude:claude /etc/crontabs/claude
 
 # エントリーポイント
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /entrypoint.sh && chown claude:claude /entrypoint.sh
 
 # claudeユーザーで実行
 USER claude
