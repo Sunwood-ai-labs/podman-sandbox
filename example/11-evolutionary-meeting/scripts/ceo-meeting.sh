@@ -130,19 +130,19 @@ current_content=""
 in_file=0
 
 while IFS= read -r line; do
-    if echo "$line" | grep -q "^===FILE_START:company/"; then
-        current_file=$(echo "$line" | sed 's/^===FILE_START://' | sed 's|company/||')
+    if echo "$line" | grep -q "^===FILE_START:\(company\|deliverables\)/"; then
+        current_file=$(echo "$line" | sed 's/^===FILE_START://;s/===$//')
         in_file=1
         current_content=""
     elif echo "$line" | grep -q "^===FILE_END==="; then
         if [ -n "$current_file" ] && [ -n "$current_content" ]; then
-            if [ "$current_file" = "history.md" ]; then
+            if [ "$current_file" = "company/history.md" ]; then
                 # history.md は追記
-                echo -e "\n### ${DATE} ${TIME}\n${current_content}" >> "${COMPANY_DIR}/${current_file}"
+                echo -e "\n### ${DATE} ${TIME}\n${current_content}" >> "${WORKSPACE}/${current_file}"
                 log "📝 ${current_file} に追記"
             else
-                # その他は上書き
-                echo "$current_content" > "${COMPANY_DIR}/${current_file}"
+                # その他は上書き（company/ deliverables/ 両対応）
+                echo "$current_content" > "${WORKSPACE}/${current_file}"
                 log "📝 ${current_file} を更新"
             fi
         fi
